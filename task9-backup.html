@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>2.9. Резервное копирование и восстановление данных (PostgreSQL)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Навигация между файлами -->
+<nav class="nav-files">
+  <div class="nav-files__inner">
+    <a href="index.html">1. Введение</a>
+    <a href="task1-webapi.html">2.2. Web API</a>
+    <a href="task2-crud.html">2.3. CRUD</a>
+    <a href="task3-docker.html">2.4. Docker</a>
+    <a href="task5-postgres-compose.html">2.5. PostgreSQL + Compose</a>
+    <a href="task6-update-version.html">2.6. Обновление версии</a>
+    <a href="task7-logs.html">2.7. Логи контейнеров</a>
+    <a href="task8-health.html">2.8. Health-check</a>
+    <a href="task9-backup.html" aria-current="page">2.9. Резервное копирование</a>
+  </div>
+</nav>
+
+<main class="page">
+
+<h1>2.9. Выполнить базовые процедуры резервного копирования и восстановления данных (PostgreSQL)</h1>
+
+<nav class="nav-topics">
+  <div class="nav-topics__title">Оглавление раздела 2.9</div>
+  <ul>
+    <li><a href="#2-9-0">2.9.0. Цель и виды резервного копирования</a></li>
+    <li><a href="#2-9-1">2.9.1. Резервное копирование средствами PostgreSQL (SQL-дамп)</a></li>
+    <li><a href="#2-9-2">2.9.2. Восстановление базы данных из дампа</a></li>
+    <li><a href="#2-9-3">2.9.3. Полное физическое резервное копирование через Docker volume</a></li>
+    <li><a href="#2-9-4">2.9.4. Восстановление Docker volume</a></li>
+    <li><a href="#2-9-5">2.9.5. Таблица команд для отчёта</a></li>
+    <li><a href="#2-9-6">2.9.6. Методическое описание для отчёта</a></li>
+  </ul>
+</nav>
+
+<hr>
+
+<section id="2-9-0">
+  <h2>2.9.0. Цель и виды резервного копирования</h2>
+
+  <p>Так как система развернута в Docker и база PostgreSQL работает в контейнере с подключённым volume, можно использовать два подхода к резервному копированию:</p>
+
+  <ol>
+    <li><strong>Логический backup (SQL-дамп)</strong> — с помощью <code>pg_dump</code>.</li>
+    <li><strong>Физический backup</strong> — копия Docker volume с файлами базы.</li>
+  </ol>
+
+  <p>Для учебной практики достаточно освоить:</p>
+  <ul>
+    <li>создание SQL-дампа и восстановление из него;</li>
+    <li>базовые операции с Docker volume как альтернативный способ.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section id="2-9-1">
+  <h2>2.9.1. Резервное копирование средствами PostgreSQL (SQL-дамп)</h2>
+
+  <p>Это основной, переносимый и рекомендуемый способ резервного копирования.</p>
+
+  <h3>Шаг 1. Узнать имя контейнера PostgreSQL</h3>
+
+  <p>Выполнить команду:</p>
+
+  <div class="script-block">
+docker ps
+  </div>
+
+  <p>Имя контейнера базы данных, например:</p>
+
+<pre><code class="language-plaintext">servicedesk-postgres
+</code></pre>
+
+  <h3>Шаг 2. Создать SQL-дамп</h3>
+
+  <p>Команда для создания резервной копии:</p>
+
+  <div class="script-block">
+docker exec -t servicedesk-postgres pg_dump -U servicedesk servicedeskdb &gt; backup.sql
+  </div>
+
+  <p><strong>Расшифровка:</strong></p>
+  <ul>
+    <li><code>servicedesk-postgres</code> — имя контейнера PostgreSQL;</li>
+    <li><code>pg_dump</code> — встроенная утилита резервного копирования PostgreSQL;</li>
+    <li><code>-U servicedesk</code> — пользователь БД;</li>
+    <li><code>servicedeskdb</code> — имя базы данных;</li>
+    <li><code>&gt; backup.sql</code> — перенаправление вывода в файл <code>backup.sql</code> на хосте.</li>
+  </ul>
+
+  <p>После выполнения в текущей папке появится файл:</p>
+
+<pre><code class="language-plaintext">backup.sql
+</code></pre>
+
+  <p>Это полный логический дамп базы данных.</p>
+
+  <figure class="image-center">
+    <img src="image/task7/3.png" alt="Создание SQL-дампа базы данных" />
+    <figcaption>Рисунок 3 – Пример создания SQL-дампа командой <code>pg_dump</code></figcaption>
+  </figure>
+</section>
+
+<hr>
+
+<section id="2-9-2">
+  <h2>2.9.2. Восстановление базы данных из дампа</h2>
+
+  <p>Перед восстановлением необходимо:</p>
+  <ul>
+    <li>остановить сервис API (чтобы не было активных подключений к базе);</li>
+    <li>очистить или пересоздать базу данных.</li>
+  </ul>
+
+  <h3>Шаг 1. Удалить старую базу и создать новую</h3>
+
+  <div class="script-block">
+docker exec -it servicedesk-postgres psql -U servicedesk -c "DROP DATABASE servicedeskdb;"
+  </div>
+
+  <div class="script-block">
+docker exec -it servicedesk-postgres psql -U servicedesk -c "CREATE DATABASE servicedeskdb;"
+  </div>
+
+  <h3>Шаг 2. Восстановить базу из дампа</h3>
+
+  <div class="script-block">
+docker exec -i servicedesk-postgres psql -U servicedesk servicedeskdb &lt; backup.sql
+  </div>
+
+  <p>Если в дампе есть таблицы и данные, в выводе появятся сообщения вида:</p>
+
+<pre><code class="language-plaintext">CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+...
+</code></pre>
+
+  <figure class="image-center">
+    <img src="image/task7/4.png" alt="Восстановление базы данных из SQL-дампа" />
+    <figcaption>Рисунок 4 – Пример восстановления базы данных из файла <code>backup.sql</code></figcaption>
+  </figure>
+</section>
+
+<hr>
+
+<section id="2-9-3">
+  <h2>2.9.3. Полное физическое резервное копирование через Docker volume</h2>
+
+  <p>Этот способ сохраняет физическое содержимое volume с файлами базы данных.</p>
+
+  <p>Он полезен, когда:</p>
+  <ul>
+    <li>нужно показать альтернативный способ резервирования;</li>
+    <li>база данных очень большая;</li>
+    <li>важно сохранить всё, включая служебные данные PostgreSQL.</li>
+  </ul>
+
+  <h3>Шаг 1. Узнать имя volume</h3>
+
+  <div class="script-block">
+docker volume ls
+  </div>
+
+  <p>Пример результата:</p>
+
+<pre><code class="language-plaintext">DRIVER    VOLUME NAME
+local     servicedesk-postgres
+</code></pre>
+
+  <h3>Шаг 2. Создать архив volume</h3>
+
+  <p>Создадим архив с содержимым volume в текущей папке:</p>
+
+  <div class="script-block">
+docker run --rm \
+  -v servicedesk-postgres:/db \
+  -v $(pwd):/backup \
+  alpine tar czvf /backup/db-volume.tar.gz /db
+  </div>
+
+  <p>После выполнения в текущем каталоге появится файл:</p>
+
+<pre><code class="language-plaintext">db-volume.tar.gz
+</code></pre>
+
+  <p>Это полная физическая копия содержимого volume с базой данных.</p>
+</section>
+
+<hr>
+
+<section id="2-9-4">
+  <h2>2.9.4. Восстановление Docker volume</h2>
+
+  <h3>Шаг 1. Остановить контейнеры</h3>
+
+  <div class="script-block">
+docker compose down
+  </div>
+
+  <h3>Шаг 2. Удалить существующий volume</h3>
+
+  <div class="script-block">
+docker volume rm servicedesk-postgres
+  </div>
+
+  <h3>Шаг 3. Восстановить volume из архива</h3>
+
+  <div class="script-block">
+docker run --rm \
+  -v servicedesk-postgres:/db \
+  -v $(pwd):/backup \
+  alpine tar xzvf /backup/db-volume.tar.gz -C /
+  </div>
+
+  <h3>Шаг 4. Запустить docker-compose</h3>
+
+  <div class="script-block">
+docker compose up -d
+  </div>
+
+  <p>После этого контейнер PostgreSQL будет использовать восстановленный volume с данными, а API сможет продолжать работу с уже восстановленной базой.</p>
+</section>
+
+<hr>
+
+<section id="2-9-5">
+  <h2>2.9.5. Таблица команд для отчёта</h2>
+
+  <p>Для отчёта удобно оформить основные операции в виде таблицы.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Операция</th>
+        <th>Команда</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Создать SQL-дамп</td>
+        <td><code>docker exec -t servicedesk-postgres pg_dump -U servicedesk servicedeskdb &gt; backup.sql</code></td>
+      </tr>
+      <tr>
+        <td>Восстановить SQL-дамп</td>
+        <td><code>docker exec -i servicedesk-postgres psql -U servicedesk servicedeskdb &lt; backup.sql</code></td>
+      </tr>
+      <tr>
+        <td>Удалить базу данных</td>
+        <td><code>DROP DATABASE servicedeskdb;</code></td>
+      </tr>
+      <tr>
+        <td>Создать базу данных</td>
+        <td><code>CREATE DATABASE servicedeskdb;</code></td>
+      </tr>
+      <tr>
+        <td>Посмотреть список volumes</td>
+        <td><code>docker volume ls</code></td>
+      </tr>
+      <tr>
+        <td>Создать архив volume</td>
+        <td><code>docker run --rm -v servicedesk-postgres:/db -v $(pwd):/backup alpine tar czvf /backup/db-volume.tar.gz /db</code></td>
+      </tr>
+      <tr>
+        <td>Восстановить volume из архива</td>
+        <td><code>docker run --rm -v servicedesk-postgres:/db -v $(pwd):/backup alpine tar xzvf /backup/db-volume.tar.gz -C /</code></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr>
+
+<section id="2-9-6">
+  <h2>2.9.6. Методическое описание для отчёта</h2>
+
+  <p>В отчёте студент должен:</p>
+
+  <ol>
+    <li>Выполнить логическое резервное копирование базы данных (SQL-дамп) и зафиксировать команду и результат (наличие файла <code>backup.sql</code>).</li>
+    <li>Выполнить восстановление базы данных из дампа и показать, что данные появились в системе после восстановления.</li>
+    <li>Продемонстрировать физическое копирование volume (создание и восстановление <code>db-volume.tar.gz</code>) как альтернативный метод.</li>
+    <li>Показать, что данные сохраняются после перезапуска контейнеров и/или обновления версии приложения.</li>
+    <li>Добавить скриншоты выполнения ключевых команд:
+      <ul>
+        <li>создание <code>backup.sql</code>;</li>
+        <li>восстановление из дампа;</li>
+        <li>создание архива <code>db-volume.tar.gz</code>;</li>
+        <li>успешный запуск <code>docker compose up -d</code> после восстановления.</li>
+      </ul>
+    </li>
+  </ol>
+
+</section>
+
+</main>
+
+</body>
+</html>
