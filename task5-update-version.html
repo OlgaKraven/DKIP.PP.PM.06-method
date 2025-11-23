@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — 2.6. Обновление версии приложения</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+<nav class="nav-files">
+  <div class="nav-files__inner">
+    <!-- Теоретические разделы -->
+    <a href="index.htm">1.1. Информационные системы</a>
+    <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+    <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+    <a href="restApi.htm">1.4. REST API</a>
+    <a href="docker.htm">1.5. Docker</a>
+    <a href="docFile.html">1.6. Dockerfile</a>
+    <a href="dockerCompose.htm">1.7. Docker Compose</a>
+    <a href="monitoring.html">1.8. Мониторинг, логи и health-check</a>
+    <a href="practices.html">1.9. Практики сопровождения</a>
+    <a href="documentation.html">1.10. Документирование</a>
+
+    <!-- Практические блоки -->
+    <a href="assignment.html">2. Выполнение задания</a>
+    <a href="task1-webapi.html">2.2. Web API (практика)</a>
+    <a href="task2-crud.html">2.3. CRUD-функционал</a>
+    <a href="task3-docker.html">2.4. Контейнеризация</a>
+    <a href="task4-postgres-compose.html">2.5. PostgreSQL и docker-compose</a>
+    <a href="task5-update-version.html">2.6. Обновление версии</a>
+    <a href="task6-logs.html">2.7. Логи контейнеров</a>
+    <a href="task7-health.html">2.8. Health-check</a>
+    <a href="task8-backup.html">2.9. Резервное копирование</a>
+  </div>
+</nav>
+
+<main class="page">
+
+<h1>2.6. Выполнить обновление версии приложения в процессе сопровождения</h1>
+
+<!-- Навигация по разделу -->
+<nav class="nav-topics">
+  <div class="nav-topics__title">Оглавление раздела 2.6</div>
+  <ul>
+    <li><a href="#2-6-0">2.6.0. Логика блока</a></li>
+    <li><a href="#2-6-1">2.6.1. Цель блока</a></li>
+    <li><a href="#2-6-2">2.6.2. Внести небольшое изменение в код</a></li>
+    <li><a href="#2-6-3">2.6.3. Сборка новой версии Docker-образа</a></li>
+    <li><a href="#2-6-4">2.6.4. Обновление версии в docker-compose.yml</a></li>
+    <li><a href="#2-6-5">2.6.5. Перезапуск docker-compose</a></li>
+    <li><a href="#2-6-6">2.6.6. Проверка обновления версии</a></li>
+    <li><a href="#2-6-7">2.6.7. Методические тезисы для отчёта</a></li>
+    <li><a href="#2-6-8">2.6.8. Если произошла ошибка «port is already allocated»</a></li>
+  </ul>
+</nav>
+
+<hr/>
+
+<!-- 2.6.0 -->
+<section id="2-6-0">
+  <h2>2.6.0. Этот шаг обучает DevOps-логике</h2>
+
+  <p>Процесс обновления приложения в контейнерной среде всегда включает такие шаги:</p>
+
+  <ol>
+    <li>Обновление исходного кода.</li>
+    <li>Пересборка Docker-образа с новым тегом.</li>
+    <li>Обновление контейнера через <code>docker-compose</code>, при котором:
+      <ul>
+        <li>база данных сохраняется (она в volume);</li>
+        <li>API перезапускается в новой версии.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <p>Цель — показать студентам, как выглядит реальная логика CI/CD в миниатюре.</p>
+</section>
+
+<hr/>
+
+<!-- 2.6.1 -->
+<section id="2-6-1">
+  <h2>2.6.1. Цель блока</h2>
+
+  <p>Студент должен уметь:</p>
+
+  <ul>
+    <li>внести изменение в приложение (логика/Swagger/модель);</li>
+    <li>собрать новый Docker-образ с новым тегом;</li>
+    <li>обновить docker-compose на новую версию образа;</li>
+    <li>перезапустить приложение без потери данных PostgreSQL.</li>
+  </ul>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.2 -->
+<section id="2-6-2">
+  <h2>2.6.2. Внести небольшое изменение в код</h2>
+
+  <p>Чтобы обновление было заметно визуально, внесём простое изменение в контроллер <code>EquipmentController</code>.</p>
+
+  <p>Например: добавим лог при вызове GET-метода.</p>
+
+  <p><strong>Было:</strong></p>
+
+<pre><code class="language-csharp">public async Task&lt;ActionResult&lt;IEnumerable&lt;Equipment&gt;&gt;&gt; GetAll()</code></pre>
+
+  <p><strong>Стало:</strong></p>
+
+<pre><code class="language-csharp">[HttpGet]
+public async Task&lt;ActionResult&lt;IEnumerable&lt;Equipment&gt;&gt;&gt; GetAll()
+{
+    Console.WriteLine("&gt;&gt;&gt; API VERSION 2: GetAll() called");
+    return await _context.Equipment.ToListAsync();
+}
+</code></pre>
+
+  <p>Также можно:</p>
+  <ul>
+    <li>изменить Swagger-описание;</li>
+    <li>добавить поле в модель;</li>
+    <li>изменить текстовое сообщение.</li>
+  </ul>
+
+  <p>Главное — чтобы после обновления студент увидел разницу.</p>
+</section>
+
+<hr/>
+
+<!-- 2.6.3 -->
+<section id="2-6-3">
+  <h2>2.6.3. Сборка новой версии Docker-образа</h2>
+
+  <p>Теперь собираем образ новой версии, не перезаписывая старый:</p>
+
+<div class="script-block">
+docker build -t servicedesk-api:2.0 .
+</div>
+
+  <p><strong>Где:</strong></p>
+  <ul>
+    <li><code>servicedesk-api</code> — имя образа;</li>
+    <li><code>2.0</code> — новая версия (можно: <code>1.1</code>, <code>v2</code>, <code>2025-02</code>).</li>
+  </ul>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.4 -->
+<section id="2-6-4">
+  <h2>2.6.4. Обновление версии в docker-compose.yml</h2>
+
+  <p>Открой <code>docker-compose.yml</code> и поменяй тег образа.</p>
+
+  <p><strong>Было:</strong></p>
+
+<pre><code class="language-yaml">api:
+  image: servicedesk-api:dev
+</code></pre>
+
+  <p><strong>Стало:</strong></p>
+
+<pre><code class="language-yaml">api:
+  image: servicedesk-api:2.0
+</code></pre>
+
+  <p>При использовании сборки внутри compose можно оставить:</p>
+
+<pre><code class="language-yaml">api:
+  build: .
+  image: servicedesk-api:2.0
+</code></pre>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.5 -->
+<section id="2-6-5">
+  <h2>2.6.5. Перезапуск docker-compose</h2>
+
+  <p>Старый контейнер удалять вручную не требуется. Достаточно выполнить:</p>
+
+<div class="script-block">
+docker compose down
+</div>
+
+<div class="script-block">
+docker compose up -d --build
+</div>
+
+  <p>Это:</p>
+  <ul>
+    <li>остановит старый контейнер API,</li>
+    <li>создаст контейнер новой версии,</li>
+    <li>оставит PostgreSQL как есть,</li>
+    <li>сохранит volume → данные не пропадут.</li>
+  </ul>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.6 -->
+<section id="2-6-6">
+  <h2>2.6.6. Проверка обновления</h2>
+
+  <p>Теперь проверяем:</p>
+
+  <ol>
+    <li>Открыть Swagger:
+      <div class="script-block">http://localhost:8080/swagger</div>
+    </li>
+
+    <li>Выполнить запрос:
+      <div class="script-block">GET /api/equipment</div>
+    </li>
+
+    <li>Посмотреть логи контейнера:
+      <div class="script-block">docker compose logs api</div>
+    </li>
+  </ol>
+
+  <p>В логах должно быть:</p>
+
+<div class="script-block">
+>>> API VERSION 2: GetAll() called
+</div>
+
+  <p>Это подтверждает, что:</p>
+
+  <ul>
+    <li>контейнер обновился;</li>
+    <li>работает новая версия API;</li>
+    <li>данные PostgreSQL сохранились.</li>
+  </ul>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.7 -->
+<section id="2-6-7">
+  <h2>2.6.7. Методические тезисы (должны попасть в отчёт)</h2>
+
+  <p>Студент должен описать следующие шаги:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Этап</th>
+        <th>Описание</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Внести изменения в исходный код API</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Собрать новый Docker-образ:
+<div class="script-inline">docker build -t servicedesk-api:2.0 .</div></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Обновить тег образа в <code>docker-compose.yml</code></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Перезапустить сервис:
+<div class="script-inline">docker compose down && docker compose up -d</div></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Проверить обновление через Swagger и логи</td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>
+
+<hr/>
+
+<!-- 2.6.8 -->
+<section id="2-6-8">
+  <h2>2.6.8. Если произошла ошибка «port is already allocated»</h2>
+
+  <p>При выполнении команды:</p>
+
+<div class="script-block">
+docker compose up -d --build
+</div>
+
+  <p>в терминале может появиться ошибка:</p>
+
+<pre><code class="language-plaintext">Error response from daemon: failed to set up container networking:
+driver failed programming external connectivity on endpoint servicedeskapi-api-1 (...):
+Bind for 0.0.0.0:8080 failed: port is already allocated
+</code></pre>
+
+  <p><strong>Что это значит:</strong></p>
+  <ul>
+    <li>порт <code>8080</code> уже занят;
+    <li>либо старый контейнер всё ещё слушает этот порт;
+    <li>либо другой сервис (не Docker) использует порт 8080.</li>
+  </ul>
+
+  <h3>Шаг 1. Проверяем, какие контейнеры используют порт 8080</h3>
+
+  <p>Выполните:</p>
+
+  <div class="script-block">
+docker ps
+  </div>
+
+  <p>Найдите в выводе контейнеры, у которых в колонке PORTS указано что-то вроде:</p>
+
+<pre><code class="language-plaintext">0.0.0.0:8080-&gt;8080/tcp
+</code></pre>
+
+  <p>Например:</p>
+
+<pre><code class="language-plaintext">CONTAINER ID   NAMES
+...            servicedesk-api-container
+...            servicedeskapi-api-1
+</code></pre>
+
+  <p>Любой контейнер с пробросом <code>8080:8080</code> будет блокировать запуск нового.</p>
+
+  <h3>Шаг 2. Останавливаем «лишние» контейнеры API</h3>
+
+  <p>Остановите контейнеры, которые занимают порт 8080 (имена см. в выводе <code>docker ps</code>):</p>
+
+  <div class="script-block">
+docker stop servicedesk-api-container
+docker stop servicedeskapi-api-1
+  </div>
+
+  <p>Если какого-то контейнера не существует, Docker выведет сообщение об ошибке — это нормально.</p>
+
+  <h3>Шаг 3. Удаляем контейнеры, чтобы освободить порт</h3>
+
+  <p>После остановки удаляем контейнеры:</p>
+
+  <div class="script-block">
+docker rm servicedesk-api-container
+docker rm servicedeskapi-api-1
+  </div>
+
+  <p>Если контейнеров несколько, удалите каждый, кто слушает порт 8080.</p>
+
+  <h3>Альтернативный вариант: остановить и удалить все контейнеры</h3>
+
+  <div class="note note--warning">
+    <div class="note__title">Осторожно</div>
+    <p>Команды ниже остановят и удалят все контейнеры Docker, но не затронут volumes. Данные PostgreSQL в volume останутся.</p>
+  </div>
+
+  <div class="script-block">
+docker stop $(docker ps -aq)
+docker rm $(docker ps -aq)
+  </div>
+
+  <p>Используйте этот вариант, если в среде нет других важных контейнеров.</p>
+
+  <h3>Шаг 4. Повторяем запуск docker-compose</h3>
+
+  <p>После освобождения порта снова выполните:</p>
+
+  <div class="script-block">
+docker compose up -d --build
+  </div>
+
+  <p>Ожидаемый результат:</p>
+  <ul>
+    <li>сервис API успешно поднимается;</li>
+    <li>контейнер PostgreSQL продолжает работать;</li>
+    <li>данные в базе не теряются, так как хранятся в <code>volume</code>.</li>
+  </ul>
+
+</section>
+
+</main>
+
+</body>
+</html>

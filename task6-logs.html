@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>2.7. Работа с логами контейнеров</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<nav class="nav-files">
+  <div class="nav-files__inner">
+    <!-- Теоретические разделы -->
+    <a href="index.htm">1.1. Информационные системы</a>
+    <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+    <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+    <a href="restApi.htm">1.4. REST API</a>
+    <a href="docker.htm">1.5. Docker</a>
+    <a href="docFile.html">1.6. Dockerfile</a>
+    <a href="dockerCompose.htm">1.7. Docker Compose</a>
+    <a href="monitoring.html">1.8. Мониторинг, логи и health-check</a>
+    <a href="practices.html">1.9. Практики сопровождения</a>
+    <a href="documentation.html">1.10. Документирование</a>
+
+    <!-- Практические блоки -->
+    <a href="assignment.html">2. Выполнение задания</a>
+    <a href="task1-webapi.html">2.2. Web API (практика)</a>
+    <a href="task2-crud.html">2.3. CRUD-функционал</a>
+    <a href="task3-docker.html">2.4. Контейнеризация</a>
+    <a href="task4-postgres-compose.html">2.5. PostgreSQL и docker-compose</a>
+    <a href="task5-update-version.html">2.6. Обновление версии</a>
+    <a href="task6-logs.html">2.7. Логи контейнеров</a>
+    <a href="task7-health.html">2.8. Health-check</a>
+    <a href="task8-backup.html">2.9. Резервное копирование</a>
+  </div>
+</nav>
+<main class="page">
+
+<h1>2.7. Продемонстрировать работу с логами контейнеров</h1>
+
+<nav class="nav-topics">
+  <div class="nav-topics__title">Оглавление раздела 2.7</div>
+  <ul>
+    <li><a href="#2-7-0">2.7.0. Назначение блока</a></li>
+    <li><a href="#2-7-1">2.7.1. Проверка работающих контейнеров</a></li>
+    <li><a href="#2-7-2">2.7.2. Просмотр логов API</a></li>
+    <li><a href="#2-7-3">2.7.3. Просмотр логов в реальном времени</a></li>
+    <li><a href="#2-7-4">2.7.4. Логи PostgreSQL</a></li>
+    <li><a href="#2-7-5">2.7.5. Фильтрация логов</a></li>
+    <li><a href="#2-7-6">2.7.6. Получение последних N строк</a></li>
+    <li><a href="#2-7-7">2.7.7. Логи за определённый период</a></li>
+    <li><a href="#2-7-8">2.7.8. Методический итог</a></li>
+  </ul>
+</nav>
+
+<hr>
+
+<section id="2-7-0">
+<h2>2.7.0. Назначение блока</h2>
+
+<p>Этот этап показывает студенту, как работать с логами контейнеров, что является важной частью сопровождения информационных систем.</p>
+
+<p><strong>Студент должен уметь:</strong></p>
+<ul>
+  <li>просматривать логи API;</li>
+  <li>просматривать логи PostgreSQL;</li>
+  <li>фильтровать вывод логов;</li>
+  <li>анализировать логи в реальном времени;</li>
+  <li>делать выводы на основе логов.</li>
+</ul>
+</section>
+
+<hr>
+
+<section id="2-7-1">
+<h2>2.7.1. Проверка работающих контейнеров</h2>
+
+<p>Выполнить команду:</p>
+
+<div class="script-block">
+docker ps
+</div>
+
+<p>Ожидаемый результат:</p>
+
+<pre><code class="language-plaintext">CONTAINER ID   IMAGE                   NAMES
+abc123         servicedesk-api:2.0     servicedeskapi-api-1
+def456         postgres:16-alpine      servicedesk-postgres
+</code></pre>
+
+</section>
+
+<hr>
+
+<section id="2-7-2">
+<h2>2.7.2. Просмотр логов API</h2>
+
+<p>Основная команда:</p>
+
+<div class="script-block">
+docker logs servicedeskapi-api-1
+</div>
+
+<p>(при необходимости имя контейнера можно уточнить через <code>docker ps</code>)</p>
+
+<p>Пример вывода:</p>
+
+<pre><code class="language-plaintext">info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://0.0.0.0:8080
+>>> API VERSION 2: GetAll() called
+info: Microsoft.EntityFrameworkCore.Update[30100]
+      Database initialized using Npgsql
+</code></pre>
+
+<p>Студент должен увидеть свои сообщения (например: <code>API VERSION 2</code>), чтобы убедиться, что обновление контейнера прошло успешно.</p>
+
+</section>
+
+<hr>
+
+<section id="2-7-3">
+<h2>2.7.3. Просмотр логов API в реальном времени</h2>
+
+<p>Аналог <code>tail -f</code> в Linux:</p>
+
+<div class="script-block">
+docker logs -f servicedeskapi-api-1
+</div>
+
+<p>Теперь студент открывает Swagger и отправляет запрос:</p>
+
+<div class="script-block">GET /api/equipment</div>
+
+<p>Ожидаемый вывод в терминале:</p>
+
+<pre><code class="language-plaintext">>>> API VERSION 2: GetAll() called
+</code></pre>
+
+<p>Это доказывает, что логирование работает, а приложение корректно пишет в stdout.</p>
+</section>
+
+<hr>
+
+<section id="2-7-4">
+<h2>2.7.4. Просмотр логов PostgreSQL</h2>
+
+<p>Команда:</p>
+
+<div class="script-block">
+docker logs servicedesk-postgres
+</div>
+
+<p>Пример вывода:</p>
+
+<pre><code class="language-plaintext">PostgreSQL init process complete; ready for start up.
+database system is ready to accept connections
+connection received: host=api user=servicedesk database=servicedeskdb
+statement: SELECT "e"."Id", ...
+</code></pre>
+
+<p>Это показывает:</p>
+<ul>
+  <li>запуск и инициализацию БД;</li>
+  <li>входящие подключения от API;</li>
+  <li>SQL-запросы (если включён verbose-режим);</li>
+  <li>ошибки или проблемы.</li>
+</ul>
+</section>
+
+<hr>
+
+<section id="2-7-5">
+<h2>2.7.5. Фильтрация логов по строке</h2>
+
+<p><strong>PowerShell (Windows):</strong></p>
+<div class="script-block">
+docker logs servicedeskapi-api-1 | Select-String "GetAll"
+</div>
+
+<p><strong>Linux / macOS:</strong></p>
+<div class="script-block">
+docker logs servicedeskapi-api-1 | grep "GetAll"
+</div>
+</section>
+
+<hr>
+
+<section id="2-7-6">
+<h2>2.7.6. Последние N строк логов</h2>
+
+<p>Например, последние 50 строк:</p>
+
+<div class="script-block">
+docker logs --tail 50 servicedeskapi-api-1
+</div>
+
+</section>
+
+<hr>
+
+<section id="2-7-7">
+<h2>2.7.7. Логи за определённый период времени</h2>
+
+<p>Логи за последние 30 минут:</p>
+
+<div class="script-block">
+docker logs --since 30m servicedeskapi-api-1
+</div>
+
+<p>Логи с определённого момента:</p>
+
+<div class="script-block">
+docker logs --since "2025-11-23T20:00:00" servicedeskapi-api-1
+</div>
+
+</section>
+
+<hr>
+
+<section id="2-7-8">
+<h2>2.7.8. Методический итог</h2>
+
+<p>Студент должен включить в отчёт:</p>
+
+<h3>1) Таблицу команд</h3>
+
+<table>
+<thead>
+<tr>
+  <th>Что делаем</th>
+  <th>Команда</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Посмотреть все логи контейнера API</td>
+  <td><code>docker logs servicedeskapi-api-1</code></td>
+</tr>
+<tr>
+  <td>Просмотр логов в реальном времени</td>
+  <td><code>docker logs -f servicedeskapi-api-1</code></td>
+</tr>
+<tr>
+  <td>Последние 50 строк</td>
+  <td><code>docker logs --tail 50 servicedeskapi-api-1</code></td>
+</tr>
+<tr>
+  <td>Логи PostgreSQL</td>
+  <td><code>docker logs servicedesk-postgres</code></td>
+</tr>
+<tr>
+  <td>Фильтрация по ключевому слову</td>
+  <td><code>docker logs servicedeskapi-api-1 | grep "GetAll"</code></td>
+</tr>
+<tr>
+  <td>Логи с определённого времени</td>
+  <td><code>docker logs --since "2025-11-23T20:00:00"</code></td>
+</tr>
+</tbody>
+</table>
+
+<h3>2) Скриншоты:</h3>
+
+<ul>
+  <li>вывод <code>docker logs servicedeskapi-api-1</code>;</li>
+  <li>вывод <code>docker logs -f</code> после запроса через Swagger;</li>
+  <li>вывод <code>docker logs servicedesk-postgres</code>.</li>
+</ul>
+
+</section>
+
+</main>
+
+</body>
+</html>
