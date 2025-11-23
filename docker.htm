@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — Основы Docker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.htm">1.1. Информационные системы</a>
+      <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+      <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+      <a href="restApi.htm">1.4. REST API</a>
+      <a href="docker.htm">1.5. Docker</a>
+      <a href="docFile.html">1.6. Dockerfile</a>
+      <a href="dockerCompose.htm">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html" aria-current="page">1.10. Документирование</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>Методические рекомендации. Основы Docker</h1>
+
+    <!-- Навигация по темам -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 1.5</div>
+      <ul>
+        <li><a href="#1-5-0">1.5. Основы Docker</a></li>
+        <li><a href="#1-5-1">1.5.1. Базовые понятия</a></li>
+        <li><a href="#1-5-2">1.5.2. Отличие контейнера от виртуальной машины</a></li>
+        <li><a href="#1-5-3">1.5.3. Основные команды Docker</a></li>
+        <li><a href="#1-5-4">1.5.4. Работа с томами (Volumes)</a></li>
+      </ul>
+    </nav>
+
+    <!-- 1.5 -->
+    <section id="1-5-0">
+      <h2>1.5. Основы Docker</h2>
+      <p>
+        <strong>Docker</strong> — это технология контейнеризации, которая позволяет
+        изолированно запускать приложения вместе со всеми зависимостями, обеспечивая
+        переносимость, простоту развертывания и воспроизводимость среды.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- 1.5.1 -->
+    <section id="1-5-1">
+      <h2>1.5.1. Базовые понятия</h2>
+
+      <h3>Docker</h3>
+      <p>
+        Docker — это платформа для упаковки, доставки и запуска приложений в изолированных
+        контейнерах. Включает инструменты и сервисы:
+      </p>
+      <ul>
+        <li>Docker Engine</li>
+        <li>Docker CLI</li>
+        <li>Docker Desktop</li>
+        <li>Docker Hub</li>
+      </ul>
+
+      <h3>Контейнер</h3>
+      <p>
+        <strong>Контейнер</strong> — это легковесная изолированная среда, содержащая:
+      </p>
+      <ul>
+        <li>само приложение,</li>
+        <li>все зависимости,</li>
+        <li>настройки окружения,</li>
+        <li>собственную файловую систему (на основе образа).</li>
+      </ul>
+      <p>Изоляция реализуется через namespace и cgroups.</p>
+
+      <h3>Образ (Image)</h3>
+      <p>
+        <strong>Образ</strong> — это шаблон контейнера, состоящий из слоёв. Содержит:
+      </p>
+      <ul>
+        <li>исходные файлы приложения,</li>
+        <li>библиотеки и зависимости,</li>
+        <li>конфигурации,</li>
+        <li>инструкции сборки.</li>
+      </ul>
+
+      <blockquote>
+        <p>Образы создаются на основе Dockerfile.</p>
+      </blockquote>
+
+      <h3>Docker Engine</h3>
+      <p>Управляет контейнерами:</p>
+      <ul>
+        <li>скачивание и хранение образов;</li>
+        <li>создание контейнеров;</li>
+        <li>управление сетью и томами;</li>
+        <li>выполнение команд CLI.</li>
+      </ul>
+
+      <h3>Docker Hub</h3>
+      <p>Публичный/приватный репозиторий образов:</p>
+      <ul>
+        <li>официальные образы (Nginx, Postgres, Redis),</li>
+        <li>хранение собственных образов,</li>
+        <li>совместная работа над проектами.</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 1.5.2 -->
+    <section id="1-5-2">
+      <h2>1.5.2. Отличие контейнера от виртуальной машины</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Характеристика</th>
+            <th>Контейнер</th>
+            <th>Виртуальная машина</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ядро ОС</td>
+            <td>Использует ядро хостовой ОС</td>
+            <td>Каждая ВМ имеет собственное ядро</td>
+          </tr>
+          <tr>
+            <td>Скорость запуска</td>
+            <td>секунды</td>
+            <td>десятки секунд/минут</td>
+          </tr>
+          <tr>
+            <td>Вес</td>
+            <td>десятки МБ</td>
+            <td>гигабайты</td>
+          </tr>
+          <tr>
+            <td>Изоляция</td>
+            <td>процессная изоляция</td>
+            <td>полная виртуализация</td>
+          </tr>
+          <tr>
+            <td>Производительность</td>
+            <td>близка к нативной</td>
+            <td>ниже из-за гипервизора</td>
+          </tr>
+          <tr>
+            <td>Назначение</td>
+            <td>запуск приложений</td>
+            <td>запуск полноценной ОС</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <blockquote>
+        <p>Итог: контейнеры — лёгкие и быстрые. ВМ — тяжёлые, но полностью изолированные.</p>
+      </blockquote>
+    </section>
+
+    <hr />
+
+    <!-- 1.5.3 -->
+    <section id="1-5-3">
+      <h2>1.5.3. Основные команды Docker</h2>
+
+      <h3>1) Сборка образа</h3>
+      <div class="script-block">
+docker build -t myapp .
+      </div>
+      <ul>
+        <li><code>-t</code> — имя образа</li>
+        <li><code>.</code> — путь к Dockerfile</li>
+      </ul>
+
+      <h3>2) Запуск контейнера</h3>
+      <div class="script-block">
+docker run myapp
+docker run -d -p 8080:80 myapp
+      </div>
+      <ul>
+        <li><code>-d</code> — фоновый режим</li>
+        <li><code>-p</code> — проброс портов</li>
+      </ul>
+
+      <h3>3) Просмотр работающих контейнеров</h3>
+      <div class="script-block">
+docker ps
+docker ps -a
+      </div>
+
+      <h3>4) Остановка контейнера</h3>
+      <div class="script-block">
+docker stop my_container
+      </div>
+
+      <h3>5) Удаление контейнера</h3>
+      <div class="script-block">
+docker rm my_container
+      </div>
+
+      <h3>6) Логи контейнера</h3>
+      <div class="script-block">
+docker logs my_container
+      </div>
+
+      <h3>7) Просмотр образов</h3>
+      <div class="script-block">
+docker images
+      </div>
+
+      <h3>8) Скачивание образа</h3>
+      <div class="script-block">
+docker pull postgres
+      </div>
+
+      <h3>9) Публикация образа</h3>
+      <div class="script-block">
+docker push myrepo/myapp
+      </div>
+      <p>Предварительно требуется <code>docker login</code>.</p>
+    </section>
+
+    <hr />
+
+    <!-- 1.5.4 -->
+    <section id="1-5-4">
+      <h2>1.5.4. Работа с томами (Volumes)</h2>
+
+      <h3>Назначение томов</h3>
+      <p>Томы используются для хранения данных вне контейнера, чтобы:</p>
+      <ul>
+        <li>данные не удалялись после остановки контейнера,</li>
+        <li>сохранять БД между перезапусками,</li>
+        <li>мигрировать данные между версиями приложения.</li>
+      </ul>
+
+      <h3>Создание тома</h3>
+      <div class="script-block">
+docker volume create myvolume
+      </div>
+
+      <h3>Использование тома при запуске</h3>
+      <div class="script-block">
+docker run -v myvolume:/var/lib/postgresql/data postgres
+      </div>
+
+      <h3>Хранение данных</h3>
+      <p>Томы хранятся на хостовой машине, например в Linux:</p>
+      <pre><code class="language-text">/var/lib/docker/volumes/</code></pre>
+
+      <h3>Резервное копирование тома</h3>
+
+      <div class="script-block">
+docker run --rm -v myvolume:/data -v $(pwd):/backup \
+  ubuntu tar cvf /backup/backup.tar /data
+      </div>
+
+      <h3>Восстановление тома</h3>
+
+      <div class="script-block">
+docker run --rm -v myvolume:/data -v $(pwd):/backup \
+  ubuntu tar xvf /backup/backup.tar -C /
+      </div>
+
+      <div class="note note--info">
+        <div class="note__title">Важно</div>
+        <p>
+          Тома являются ключевым механизмом Docker для долговременного хранения данных,
+          особенно при использовании контейнеров с СУБД.
+        </p>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

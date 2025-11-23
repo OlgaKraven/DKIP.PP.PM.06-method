@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — Dockerfile и контейнеризация приложений</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.htm">1.1. Информационные системы</a>
+      <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+      <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+      <a href="restApi.htm">1.4. REST API</a>
+      <a href="docker.htm">1.5. Docker</a>
+      <a href="docFile.html">1.6. Dockerfile</a>
+      <a href="dockerCompose.htm">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html" aria-current="page">1.10. Документирование</a>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>1.6. Dockerfile и контейнеризация приложений</h1>
+
+    <!-- Навигация по темам -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 1.6</div>
+      <ul>
+        <li><a href="#1-6-0">1.6. Dockerfile и контейнеризация приложений</a></li>
+        <li><a href="#1-6-1">1.6.1. Структура Dockerfile</a></li>
+        <li><a href="#1-6-2">1.6.2. Multi-stage build в .NET</a></li>
+        <li><a href="#1-6-3">1.6.3. Пример полного Dockerfile для ASP.NET Core Web API</a></li>
+        <li><a href="#1-6-4">1.6.4. Создание собственного образа</a></li>
+      </ul>
+    </nav>
+
+    <!-- 1.6.0 -->
+    <section id="1-6-0">
+      <h2>1.6. Dockerfile и контейнеризация приложений</h2>
+      <p>
+        <strong>Dockerfile</strong> — это сценарий сборки образа Docker. Он содержит набор
+        инструкций, которые определяют, какие слои будут включены в конечный образ и как
+        будет запускаться приложение.
+      </p>
+      <p>
+        Для ASP.NET Core и .NET проектов Dockerfile является ключевым элементом при
+        создании переносимых Web API-сервисов.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- 1.6.1 -->
+    <section id="1-6-1">
+      <h2>1.6.1. Структура Dockerfile</h2>
+
+      <p>
+        Dockerfile — это текстовый файл, который описывает последовательность инструкций.
+        Основные инструкции:
+      </p>
+
+      <h3>1) FROM — базовый образ</h3>
+      <p>Определяет, на основе какого образа создаётся новый:</p>
+
+      <pre><code class="language-dockerfile">FROM mcr.microsoft.com/dotnet/aspnet:8.0</code></pre>
+
+      <p>Типичные базовые образы для .NET:</p>
+      <ul>
+        <li><code>mcr.microsoft.com/dotnet/sdk:8.0</code> — для сборки;</li>
+        <li><code>mcr.microsoft.com/dotnet/aspnet:8.0</code> — для запуска;</li>
+        <li><code>ubuntu</code>, <code>alpine</code> — минимальные образы Linux.</li>
+      </ul>
+
+      <h3>2) WORKDIR — рабочая директория</h3>
+      <p>
+        Определяет папку внутри контейнера, в которой будут выполняться команды:
+      </p>
+
+      <pre><code class="language-dockerfile">WORKDIR /app</code></pre>
+
+      <p>Все последующие команды выполняются относительно этой директории.</p>
+
+      <h3>3) COPY — копирование файлов в контейнер</h3>
+
+      <pre><code class="language-dockerfile">COPY . .</code></pre>
+
+      <p>
+        Инструкция <code>COPY</code> используется для переноса исходного кода,
+        бинарных файлов или конфигураций в образ.
+      </p>
+      <p>Типичные варианты:</p>
+
+      <pre><code class="language-dockerfile">COPY MyApi.csproj .
+COPY . /app</code></pre>
+
+      <h3>4) RUN — выполнение команд внутри контейнера</h3>
+      <p>
+        Команда выполняется на этапе сборки образа, а не при запуске контейнера.
+      </p>
+
+      <pre><code class="language-dockerfile">RUN dotnet restore
+RUN apt-get update && apt-get install -y curl</code></pre>
+
+      <h3>5) CMD и ENTRYPOINT — команда запуска</h3>
+
+      <p>
+        <code>CMD</code> задаёт команду по умолчанию, а <code>ENTRYPOINT</code> фиксирует
+        исполняемый процесс.
+      </p>
+
+      <pre><code class="language-dockerfile">CMD ["dotnet", "MyApi.dll"]
+ENTRYPOINT ["dotnet", "MyApi.dll"]</code></pre>
+
+      <p>Разница между инструкциями:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Инструкция</th>
+            <th>Можно переопределить</th>
+            <th>Использование</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CMD</td>
+            <td>Да</td>
+            <td>Параметры и команда по умолчанию</td>
+          </tr>
+          <tr>
+            <td>ENTRYPOINT</td>
+            <td>Нет (без дополнительных параметров)</td>
+            <td>Обязательная команда запуска контейнера</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6) EXPOSE — объявление порта</h3>
+
+      <p>
+        Указывает, какой порт используется приложением внутри контейнера:
+      </p>
+
+      <pre><code class="language-dockerfile">EXPOSE 8080</code></pre>
+
+      <p>
+        Важно: <code>EXPOSE</code> не открывает порт наружу — это лишь декларация для
+        документации и вспомогательных инструментов.
+      </p>
+      <p>
+        Проброс порта осуществляется при запуске:
+      </p>
+
+      <pre><code class="language-bash">docker run -p 8080:8080 image</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 1.6.2 -->
+    <section id="1-6-2">
+      <h2>1.6.2. Multi-stage build в .NET</h2>
+
+      <p>
+        Многоэтапная сборка (multi-stage build) используется для:
+      </p>
+      <ul>
+        <li>уменьшения размера образа;</li>
+        <li>отделения этапа сборки от этапа выполнения;</li>
+        <li>повышения безопасности (исходники остаются только в первом этапе).</li>
+      </ul>
+
+      <h3>Этап 1 — SDK (сборка)</h3>
+      <p>Используется образ SDK, который включает компилятор и утилиты.</p>
+
+      <pre><code class="language-dockerfile">FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY MyApi.csproj .
+RUN dotnet restore
+
+COPY . .
+RUN dotnet publish -c Release -o /app/out</code></pre>
+
+      <h3>Этап 2 — Runtime (запуск)</h3>
+      <p>Используется минимальный образ, содержащий только runtime.</p>
+
+      <pre><code class="language-dockerfile">FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/out .
+
+ENTRYPOINT ["dotnet", "MyApi.dll"]</code></pre>
+
+      <h3>Преимущества multi-stage build</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Преимущество</th>
+            <th>Описание</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Маленький размер образа</td>
+            <td>В итоговом образе только runtime (~80 MB вместо 700+ MB SDK)</td>
+          </tr>
+          <tr>
+            <td>Повышенная безопасность</td>
+            <td>Исходный код и инструменты сборки не попадают в финальный образ</td>
+          </tr>
+          <tr>
+            <td>Производительность CI/CD</td>
+            <td>Быстрее передача и запуск образа в разных средах</td>
+          </tr>
+          <tr>
+            <td>Чистота структуры</td>
+            <td>В финальном слое только собранные артефакты (DLL, конфигурации)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr />
+
+    <!-- 1.6.3 -->
+    <section id="1-6-3">
+      <h2>1.6.3. Пример полного Dockerfile для ASP.NET Core Web API</h2>
+
+      <pre><code class="language-dockerfile"># Этап 1 — сборка
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY *.csproj .
+RUN dotnet restore
+
+COPY . .
+RUN dotnet publish -c Release -o /app/publish
+
+# Этап 2 — запуск
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "MyApi.dll"]</code></pre>
+
+      <div class="note note--info">
+        <div class="note__title">Комментарий</div>
+        <p>
+          В учебных проектах достаточно одного Dockerfile на корне Web API. При смене
+          имени сборки (MyApi.dll) необходимо обновить его в инструкции ENTRYPOINT.
+        </p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- 1.6.4 -->
+    <section id="1-6-4">
+      <h2>1.6.4. Создание собственного образа</h2>
+
+      <h3>1. Сборка образа</h3>
+      <div class="script-block">
+docker build -t myapi .
+      </div>
+      <p>
+        Здесь <code>myapi</code> — имя образа, а <code>.</code> — текущая директория
+        с Dockerfile.
+      </p>
+
+      <h3>2. Проверка списка образов</h3>
+      <div class="script-block">
+docker images
+      </div>
+
+      <h3>3. Запуск контейнера с API</h3>
+      <div class="script-block">
+docker run -d -p 8080:8080 --name api myapi
+      </div>
+
+      <ul>
+        <li><code>-d</code> — запуск в фоновом режиме;</li>
+        <li><code>-p 8080:8080</code> — проброс порта контейнера на хост;</li>
+        <li><code>--name api</code> — имя контейнера.</li>
+      </ul>
+
+      <h3>4. Остановка контейнера</h3>
+      <div class="script-block">
+docker stop api
+      </div>
+
+      <h3>5. Удаление контейнера</h3>
+      <div class="script-block">
+docker rm api
+      </div>
+
+      <h3>6. Публикация образа в Docker Hub</h3>
+
+      <div class="script-block">
+docker login
+docker tag myapi username/myapi
+docker push username/myapi
+      </div>
+
+      <p>
+        Вместо <code>username</code> необходимо указать свой логин в Docker Hub. После
+        публикации образ можно использовать в других средах и на серверах.
+      </p>
+    </section>
+
+  </main>
+</body>
+</html>

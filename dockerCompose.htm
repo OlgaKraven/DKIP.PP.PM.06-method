@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — Docker Compose</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.htm">1.1. Информационные системы</a>
+      <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+      <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+      <a href="restApi.htm">1.4. REST API</a>
+      <a href="docker.htm">1.5. Docker</a>
+      <a href="docFile.html">1.6. Dockerfile</a>
+      <a href="dockerCompose.htm">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html" aria-current="page">1.10. Документирование</a>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>1.7. Docker Compose (если используется БД или несколько сервисов)</h1>
+
+    <!-- Навигация по темам -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 1.7</div>
+      <ul>
+        <li><a href="#1-7-0">1.7. Docker Compose (общие сведения)</a></li>
+        <li><a href="#1-7-1">1.7.1. Что такое Docker Compose и для чего оно применяется</a></li>
+        <li><a href="#1-7-2">1.7.2. Структура файла docker-compose.yml</a></li>
+        <li><a href="#1-7-3">1.7.3. Связь нескольких контейнеров</a></li>
+        <li><a href="#1-7-4">1.7.4. Пример полноценного docker-compose.yml</a></li>
+        <li><a href="#1-7-5">1.7.5. Основные команды Docker Compose</a></li>
+      </ul>
+    </nav>
+
+    <!-- 1.7.0 -->
+    <section id="1-7-0">
+      <h2>1.7. Docker Compose (если используется БД или несколько сервисов)</h2>
+      <p>
+        <strong>Docker Compose</strong> — инструмент для описания и совместного запуска
+        нескольких контейнеров. Чаще всего используется для запуска приложений, состоящих
+        из нескольких сервисов: API + база данных, API + Redis, несколько микросервисов,
+        набор инструментов разработки.
+      </p>
+      <p>
+        Compose позволяет автоматизировать развёртывание и управление всей инфраструктурой
+        проекта с помощью одного файла <code>docker-compose.yml</code>.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- 1.7.1 -->
+    <section id="1-7-1">
+      <h2>1.7.1. Что такое Docker Compose и для чего оно применяется</h2>
+
+      <p>Docker Compose позволяет:</p>
+      <ul>
+        <li>описывать инфраструктуру проекта в одном YAML-файле,</li>
+        <li>запускать сразу несколько контейнеров одной командой,</li>
+        <li>автоматически создавать сети и точки связи между контейнерами,</li>
+        <li>конфигурировать переменные среды, тома и порты,</li>
+        <li>обеспечивать воспроизводимость среды разработки.</li>
+      </ul>
+
+      <p>Compose незаменим при разработке и сопровождении систем, где есть:</p>
+      <ul>
+        <li>API + PostgreSQL,</li>
+        <li>API + брокер сообщений (MessageBroker),</li>
+        <li>набор микросервисов,</li>
+        <li>системы мониторинга (Grafana, Prometheus),</li>
+        <li>окружения для разработки.</li>
+      </ul>
+
+      <p>Одной командой можно развернуть всё приложение и его инфраструктуру.</p>
+    </section>
+
+    <hr />
+
+    <!-- 1.7.2 -->
+    <section id="1-7-2">
+      <h2>1.7.2. Структура файла docker-compose.yml</h2>
+
+      <p>
+        Файл <code>docker-compose.yml</code> описывает, какие сервисы входят в систему,
+        как они связаны и какие настройки используются.
+      </p>
+
+      <h3>Ключевые разделы</h3>
+
+      <h4>1. services — перечень контейнеров</h4>
+      <p>
+        В блоке <code>services</code> описываются все контейнеры, которые нужно запустить.
+      </p>
+
+      <pre><code class="language-yaml">services:
+  app:
+    image: myapi
+  db:
+    image: postgres</code></pre>
+
+      <h4>2. image — образ для контейнера</h4>
+      <p>Указывает, какой Docker-образ использовать:</p>
+
+      <pre><code class="language-yaml">image: postgres:15
+image: myapi:latest</code></pre>
+
+      <p>
+        Вместо <code>image</code> можно использовать <code>build:</code> для сборки образа
+        из Dockerfile:
+      </p>
+
+      <pre><code class="language-yaml">services:
+  app:
+    build: .</code></pre>
+
+      <h4>3. volumes — тома для хранения данных</h4>
+      <p>Используются для:</p>
+      <ul>
+        <li>хранения данных БД,</li>
+        <li>сохранения логов,</li>
+        <li>передачи конфигураций.</li>
+      </ul>
+
+      <pre><code class="language-yaml">volumes:
+  pgdata:</code></pre>
+
+      <p>Привязка тома в сервисе:</p>
+
+      <pre><code class="language-yaml">services:
+  db:
+    image: postgres:15
+    volumes:
+      - pgdata:/var/lib/postgresql/data</code></pre>
+
+      <p>
+        Том сохраняет данные, даже если контейнер удалён, и обеспечивает долговременное
+        хранение информации.
+      </p>
+
+      <h4>4. ports — проброс портов</h4>
+      <p>
+        Позволяет открыть порт контейнера наружу (на хостовую машину):
+      </p>
+
+      <pre><code class="language-yaml">ports:
+  - "8080:8080"</code></pre>
+
+      <p>Формат: <code>внешний:внутренний</code> порт.</p>
+
+      <h4>5. environment — переменные среды</h4>
+      <p>Используются для передачи конфигураций в контейнер:</p>
+
+      <pre><code class="language-yaml">environment:
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: 1234
+  POSTGRES_DB: appdb
+
+  ASPNETCORE_ENVIRONMENT: Production
+  ConnectionStrings__Default: "Host=db;Port=5432;Database=appdb;Username=admin;Password=1234"</code></pre>
+
+      <p>
+        В docker-compose сервисы доступны по имени как по хосту, например:
+        <code>Host=db</code>.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- 1.7.3 -->
+    <section id="1-7-3">
+      <h2>1.7.3. Связь нескольких контейнеров</h2>
+
+      <p>
+        Docker Compose автоматически создаёт виртуальную сеть (bridge), в которой каждый
+        контейнер доступен по имени сервиса.
+      </p>
+
+      <p>Например, API-сервис <code>app</code> подключается к БД <code>db</code>, используя:</p>
+      <ul>
+        <li><code>Host=db</code></li>
+        <li><code>Port=5432</code></li>
+      </ul>
+
+      <h3>Образец конфигурации</h3>
+
+      <pre><code class="language-yaml">services:
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=appdb;Username=admin;Password=1234"
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: appdb</code></pre>
+
+      <p>
+        Директива <code>depends_on</code> говорит Compose, что сначала надо запустить
+        <code>db</code>, а затем <code>app</code>.
+      </p>
+
+      <div class="note note--info">
+        <div class="note__title">Замечание</div>
+        <p>
+          <code>depends_on</code> отвечает только за порядок запуска контейнеров, но не
+          гарантирует готовность сервиса (например, базы данных). Для продакшена
+          дополнительно используют health-check и ожидание готовности.
+        </p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- 1.7.4 -->
+    <section id="1-7-4">
+      <h2>1.7.4. Пример полноценного docker-compose.yml</h2>
+
+      <pre><code class="language-yaml">version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: myapi
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=appdb;Username=admin;Password=1234"
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:</code></pre>
+
+      <p>
+        Этот compose-файл создаёт API-сервис и PostgreSQL с автоматическим подключением и
+        сохранением данных БД в томе <code>pgdata</code>.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- 1.7.5 -->
+    <section id="1-7-5">
+      <h2>1.7.5. Основные команды Docker Compose</h2>
+
+      <h3>1. Запуск всех сервисов</h3>
+
+      <div class="script-block">
+docker compose up -d
+      </div>
+
+      <ul>
+        <li><code>up</code> — поднять контейнеры,</li>
+        <li><code>-d</code> — фоновый режим.</li>
+      </ul>
+
+      <p>После запуска все сервисы работают одновременно.</p>
+
+      <h3>2. Остановка и удаление контейнеров</h3>
+
+      <div class="script-block">
+docker compose down
+      </div>
+
+      <p>С удалением томов:</p>
+
+      <div class="script-block">
+docker compose down -v
+      </div>
+
+      <h3>3. Просмотр логов всех сервисов</h3>
+
+      <div class="script-block">
+docker compose logs
+      </div>
+
+      <p>Просмотр логов конкретного сервиса:</p>
+
+      <div class="script-block">
+docker compose logs app
+      </div>
+
+      <p>Потоковое наблюдение:</p>
+
+      <div class="script-block">
+docker compose logs -f
+      </div>
+
+      <div class="note note--info">
+        <div class="note__title">Практический совет</div>
+        <p>
+          Для учебных проектов достаточно хранить файл <code>docker-compose.yml</code> в
+          корне репозитория и запускать всю инфраструктуру одной командой
+          <code>docker compose up -d</code>.
+        </p>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — Базы данных и EF Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.htm">1.1. Информационные системы</a>
+      <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+      <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+      <a href="restApi.htm">1.4. REST API</a>
+      <a href="docker.htm">1.5. Docker</a>
+      <a href="docFile.html">1.6. Dockerfile</a>
+      <a href="dockerCompose.htm">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html" aria-current="page">1.10. Документирование</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>Методические рекомендации. Работа с базами данных</h1>
+
+    <!-- Навигация по темам -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 1.3</div>
+      <ul>
+        <li><a href="#1-3-0">1.3. Работа с базами данных</a></li>
+        <li><a href="#1-3-1">1.3.1. Понятие СУБД и таблиц</a></li>
+        <li><a href="#1-3-2">1.3.2. Основы SQL (PostgreSQL)</a></li>
+        <li><a href="#1-3-3">1.3.3. Первичный ключ и связи между таблицами</a></li>
+        <li><a href="#1-3-4">1.3.4. Миграции (EF Core)</a></li>
+        <li><a href="#1-3-5">1.3.5. ORM Entity Framework Core</a></li>
+      </ul>
+    </nav>
+
+    <section id="1-3-0">
+      <h2>1.3. Работа с базами данных</h2>
+      <p>
+        Работа с базами данных — один из ключевых элементов разработки информационных систем.
+        В рамках создания Web API студент должен понимать основы реляционных СУБД, язык SQL
+        и базовые возможности ORM Entity Framework Core.
+      </p>
+    </section>
+
+    <hr />
+
+    <section id="1-3-1">
+      <h2>1.3.1. Понятие СУБД и таблиц</h2>
+
+      <p>
+        <strong>СУБД (система управления базами данных)</strong> — программное обеспечение,
+        которое обеспечивает создание, хранение, изменение и управление данными.
+      </p>
+
+      <h3>Основные функции СУБД</h3>
+      <ul>
+        <li>хранение данных в структурированном виде;</li>
+        <li>обеспечение целостности данных;</li>
+        <li>выполнение запросов (SQL);</li>
+        <li>управление пользователями и правами доступа;</li>
+        <li>резервное копирование и восстановление.</li>
+      </ul>
+
+      <p>Примеры СУБД: PostgreSQL, MySQL, SQL Server, SQLite.</p>
+
+      <h3>Таблица</h3>
+      <p>
+        Таблица — базовая структура реляционной базы данных, хранящая данные в виде строк и столбцов.
+      </p>
+      <ul>
+        <li>Столбец — поле определённого типа данных.</li>
+        <li>Строка — отдельная запись (объект сущности).</li>
+        <li>Схема БД — набор таблиц и их связей.</li>
+      </ul>
+
+      <p>Пример таблицы <code>Users</code>:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Kate</td>
+            <td>kate@mail.com</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>John</td>
+            <td>john@mail.com</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr />
+
+    <section id="1-3-2">
+      <h2>1.3.2. Основы SQL (PostgreSQL)</h2>
+
+      <p>
+        <strong>SQL</strong> — язык запросов для работы с реляционными данными.
+        Студент должен владеть основными операциями.
+      </p>
+
+      <h3>SELECT — выборка данных</h3>
+
+      <pre><code class="language-sql">SELECT * FROM Users;
+
+SELECT Id, Email
+FROM Users
+WHERE Id = 1;</code></pre>
+
+      <h3>INSERT — вставка данных</h3>
+
+      <pre><code class="language-sql">INSERT INTO Users (Name, Email)
+VALUES ('Ivan', 'ivan@mail.com');</code></pre>
+
+      <h3>UPDATE — обновление данных</h3>
+
+      <pre><code class="language-sql">UPDATE Users
+SET Email = 'new@mail.com'
+WHERE Id = 1;</code></pre>
+
+      <h3>DELETE — удаление данных</h3>
+
+      <pre><code class="language-sql">DELETE FROM Users
+WHERE Id = 3;</code></pre>
+    </section>
+
+    <hr />
+
+    <section id="1-3-3">
+      <h2>1.3.3. Первичный ключ и связи между таблицами</h2>
+
+      <h3>Первичный ключ (Primary Key, PK)</h3>
+      <p>
+        <strong>PK</strong> — колонка (или набор колонок), уникально идентифицирующая
+        запись в таблице.
+      </p>
+
+      <pre><code class="language-sql">Id SERIAL PRIMARY KEY</code></pre>
+
+      <h3>Типы связей</h3>
+
+      <ol>
+        <li>
+          <strong>1–N (один ко многим)</strong><br />
+          Один пользователь → много заказов.<br />
+          Пример:
+          <ul>
+            <li>таблица <code>Users</code> (1);</li>
+            <li>таблица <code>Orders</code> (N);</li>
+            <li><code>Orders.UserId</code> → внешний ключ (FK) на <code>Users.Id</code>.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>N–M (многие ко многим)</strong><br />
+          Много студентов → много курсов. Требуется промежуточная таблица:
+          <ul>
+            <li><code>Students</code></li>
+            <li><code>Courses</code></li>
+            <li><code>StudentCourses (StudentId, CourseId)</code></li>
+          </ul>
+        </li>
+        <li>
+          <strong>1–1 (один к одному)</strong><br />
+          Используется реже, например для вынесения дополнительных данных в отдельную таблицу.
+        </li>
+      </ol>
+    </section>
+
+    <hr />
+
+    <section id="1-3-4">
+      <h2>1.3.4. Миграции (если используется EF Core)</h2>
+
+      <p>
+        <strong>Миграции</strong> — механизм, позволяющий изменять структуру базы данных через код.
+      </p>
+
+      <p>Миграции используются для:</p>
+      <ul>
+        <li>автоматического создания таблиц;</li>
+        <li>добавления новых столбцов;</li>
+        <li>изменения схемы;</li>
+        <li>контроля версий базы.</li>
+      </ul>
+
+      <div class="script-block">
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+      </div>
+
+      <p>
+        Команды вызываются из консоли и отражают изменения модели данных в структуре БД.
+      </p>
+    </section>
+
+    <hr />
+
+    <section id="1-3-5">
+      <h2>1.3.5. ORM Entity Framework Core</h2>
+
+      <p>
+        <strong>Entity Framework Core (EF Core)</strong> — ORM-фреймворк, позволяющий работать
+        с базой данных через объекты C#.
+      </p>
+
+      <p>ORM выполняет:</p>
+      <ul>
+        <li>отображение классов на таблицы;</li>
+        <li>генерацию SQL-команд;</li>
+        <li>отслеживание изменений;</li>
+        <li>поддержку миграций.</li>
+      </ul>
+
+      <h3>DbContext</h3>
+
+      <pre><code class="language-csharp">public class AppDbContext : DbContext
+{
+    public DbSet&lt;User&gt; Users { get; set; }
+
+    public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options)
+        : base(options) { }
+}</code></pre>
+
+      <p>
+        <code>DbContext</code> управляет подключением к базе, формирует SQL и выполняет
+        операции с данными.
+      </p>
+
+      <h3>DbSet</h3>
+
+      <pre><code class="language-csharp">public DbSet&lt;User&gt; Users { get; set; }
+
+// Примеры операций:
+context.Users.Add(user);
+context.Users.Remove(user);
+var list = context.Users.ToList();</code></pre>
+
+      <h3>Миграции EF Core</h3>
+
+      <p>Миграции EF Core используются для автоматического создания или обновления структуры БД:</p>
+
+      <div class="script-block">
+dotnet ef migrations add AddedOrders
+dotnet ef database update
+      </div>
+
+      <h3>Конфигурация подключения</h3>
+
+      <p>Подключение к PostgreSQL задаётся в <code>appsettings.json</code>:</p>
+
+      <pre><code class="language-json">{
+  "ConnectionStrings": {
+    "Default": "Host=localhost;Port=5432;Database=exampledb;Username=postgres;Password=1234"
+  }
+}</code></pre>
+
+      <p>Регистрация контекста в <code>Program.cs</code>:</p>
+
+      <pre><code class="language-csharp">builder.Services.AddDbContext&lt;AppDbContext&gt;(options =&gt;
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));</code></pre>
+
+      <p>Для работы с PostgreSQL требуются пакеты:</p>
+      <ul>
+        <li><code>Microsoft.EntityFrameworkCore.Design</code></li>
+        <li><code>Npgsql.EntityFrameworkCore.PostgreSQL</code></li>
+      </ul>
+
+      <div class="note note--warning">
+        <div class="note__title">Практический совет</div>
+        <p>
+          Перед выполнением миграций убедитесь, что строка подключения корректна и база
+          данных доступна из среды разработки.
+        </p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

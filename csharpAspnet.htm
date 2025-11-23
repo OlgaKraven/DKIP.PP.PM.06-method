@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — C# и ASP.NET Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.htm">1.1. Информационные системы</a>
+      <a href="csharpAspnet.htm">1.2. C# и ASP.NET Core</a>
+      <a href="dbEfcore.htm">1.3. Базы данных и EF Core</a>
+      <a href="restApi.htm">1.4. REST API</a>
+      <a href="docker.htm">1.5. Docker</a>
+      <a href="docFile.html">1.6. Dockerfile</a>
+      <a href="dockerCompose.htm">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html" aria-current="page">1.10. Документирование</a>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>Методические рекомендации. Основы C# и ASP.NET Core</h1>
+
+    <!-- Навигация по темам -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 1.2</div>
+      <ul>
+        <li><a href="#1-2-0">1.2. Основы разработки на C# и ASP.NET Core</a></li>
+        <li><a href="#1-2-1">1.2.1. Основы языка программирования C#</a></li>
+        <li><a href="#1-2-2">1.2.2. Основы ASP.NET Core</a></li>
+        <li><a href="#1-2-3">1.2.3. CRUD-операции</a></li>
+        <li><a href="#1-2-4">1.2.4. Форматы обмена данными: JSON и сериализация</a></li>
+      </ul>
+    </nav>
+
+    <section id="1-2-0">
+      <h2>1.2. Основы разработки на C# и ASP.NET Core</h2>
+      <p>
+        Раздел описывает базовые возможности языка C# и фреймворка ASP.NET Core,
+        необходимые для разработки Web API с CRUD-функционалом.
+      </p>
+    </section>
+
+    <hr />
+
+    <section id="1-2-1">
+      <h2>1.2.1. Основы языка программирования C#</h2>
+
+      <p>
+        <strong>C#</strong> — современный объектно-ориентированный язык, разработанный
+        корпорацией Microsoft. Он используется для разработки web-приложений, сервисов,
+        десктопных программ, игр (Unity), мобильных приложений и корпоративных систем.
+      </p>
+
+      <h3>Типы данных</h3>
+      <p>C# поддерживает множество встроенных типов:</p>
+      <ol>
+        <li>
+          Числовые: <code>int</code>, <code>long</code>, <code>float</code>,
+          <code>double</code>, <code>decimal</code>.
+        </li>
+        <li>
+          Логические: <code>bool</code>.
+        </li>
+        <li>
+          Строковые: <code>string</code>, <code>char</code>.
+        </li>
+        <li>
+          Дата и время: <code>DateTime</code>.
+        </li>
+        <li>
+          Ссылочные типы: классы, интерфейсы, массивы и др.
+        </li>
+      </ol>
+      <p>
+        Типы делятся на значимые и ссылочные, что важно для управления памятью и передачи
+        параметров в методы.
+      </p>
+
+      <h3>Классы, методы, свойства</h3>
+
+      <pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }        // Свойство
+    public string Name { get; set; }
+
+    public void SayHello()             // Метод
+    {
+        Console.WriteLine($"Привет, {Name}!");
+    }
+}</code></pre>
+
+      <p>
+        Класс — основной элемент объектно-ориентированной модели. Свойства используются
+        для хранения данных, методы — для выполнения логики.
+      </p>
+      <p>Ключевые концепции: инкапсуляция, наследование, полиморфизм.</p>
+
+      <h3>Коллекции</h3>
+      <p>Для хранения наборов данных используются:</p>
+      <ul>
+        <li><code>List&lt;T&gt;</code> — список;</li>
+        <li><code>Dictionary&lt;TKey, TValue&gt;</code> — словарь;</li>
+        <li><code>Queue&lt;T&gt;</code> — очередь;</li>
+        <li><code>HashSet&lt;T&gt;</code> — множество.</li>
+      </ul>
+
+      <pre><code class="language-csharp">var users = new List&lt;string&gt; { "Kate", "John" };</code></pre>
+
+      <p>
+        Коллекции активно используются в Web API для хранения, фильтрации и обработки данных.
+      </p>
+
+      <h3>Async / Await (базово)</h3>
+
+      <p>
+        Асинхронность позволяет выполнять операции без блокировки потоков, что критично
+        для web-сервисов.
+      </p>
+
+      <pre><code class="language-csharp">public async Task&lt;string&gt; LoadData()
+{
+    await Task.Delay(1000);               // имитация задержки
+    return "готово";
+}</code></pre>
+
+      <p>
+        <code>async/await</code> упрощает работу с длительными операциями: доступ к БД,
+        HTTP-запросы, файловые операции.
+      </p>
+    </section>
+
+    <hr />
+
+    <section id="1-2-2">
+      <h2>1.2.2. Основы ASP.NET Core</h2>
+
+      <p>
+        <strong>ASP.NET Core</strong> — кроссплатформенный фреймворк для разработки
+        web-приложений и API. Он построен вокруг минимализма, гибкости и встроенной
+        поддержки Dependency Injection.
+      </p>
+
+      <h3>Структура Web API</h3>
+      <p>Типичный проект включает директории и файлы:</p>
+
+      <pre><code class="language-text">/Controllers      — контроллеры
+/Models           — модели домена
+/DTOs             — объекты передачи данных
+/Services         — бизнес-логика
+Program.cs        — конфигурация приложения
+appsettings.json  — настройки</code></pre>
+
+      <p>
+        Обработка запроса строится по цепочке:
+        <code>middleware → контроллер → сервис → база данных → ответ</code>.
+      </p>
+
+      <h3>Контроллеры и маршруты</h3>
+
+      <pre><code class="language-csharp">[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetAll() =&gt; Ok("Список пользователей");
+}</code></pre>
+
+      <p>Маршруты задаются через атрибуты:</p>
+      <ul>
+        <li><code>[HttpGet]</code></li>
+        <li><code>[HttpPost]</code></li>
+        <li><code>[HttpPut]</code></li>
+        <li><code>[HttpDelete]</code></li>
+      </ul>
+
+      <h3>Модели (Models)</h3>
+
+      <pre><code class="language-csharp">public class User
+{
+    public int Id { get; set; }
+    public string Email { get; set; }
+}</code></pre>
+
+      <p>
+        Модели отражают структуру таблиц БД или сущностей предметной области.
+      </p>
+
+      <h3>DTO (Data Transfer Objects)</h3>
+
+      <pre><code class="language-csharp">public class CreateUserDto
+{
+    public string Email { get; set; }
+    public string Password { get; set; }
+}</code></pre>
+
+      <p>
+        DTO используют для передачи данных между клиентом и сервером, чтобы скрывать
+        лишние поля модели, отделять внутреннюю структуру от внешнего API и применять
+        валидацию.
+      </p>
+
+      <h3>Валидация DTO</h3>
+
+      <pre><code class="language-csharp">public class RegisterDto
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; }
+
+    [MinLength(6)]
+    public string Password { get; set; }
+}</code></pre>
+
+      <p>Ошибки автоматически возвращаются в формате JSON.</p>
+
+      <h3>Dependency Injection (DI)</h3>
+
+      <pre><code class="language-csharp">// Регистрация сервиса
+services.AddScoped&lt;IUserService, UserService&gt;();
+
+// Использование в контроллере
+public class UsersController : ControllerBase
+{
+    private readonly IUserService _service;
+
+    public UsersController(IUserService service)
+    {
+        _service = service;
+    }
+}</code></pre>
+
+      <p>
+        В ASP.NET Core DI встроен по умолчанию. Это улучшает тестируемость, расширяемость
+        и читабельность приложения.
+      </p>
+    </section>
+
+    <hr />
+
+    <section id="1-2-3">
+      <h2>1.2.3. CRUD-операции</h2>
+
+      <p>
+        <strong>CRUD</strong> — это базовые операции работы с данными: создание,
+        чтение, обновление и удаление.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Операция</th>
+            <th>HTTP-метод</th>
+            <th>Назначение</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Create</td>
+            <td>POST</td>
+            <td>Создание записи</td>
+          </tr>
+          <tr>
+            <td>Read</td>
+            <td>GET</td>
+            <td>Получение данных</td>
+          </tr>
+          <tr>
+            <td>Update</td>
+            <td>PUT / PATCH</td>
+            <td>Изменение существующей записи</td>
+          </tr>
+          <tr>
+            <td>Delete</td>
+            <td>DELETE</td>
+            <td>Удаление записи</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code class="language-csharp">[HttpPost]
+public IActionResult Create(User user) =&gt; Created(...);
+
+[HttpGet("{id}")]
+public IActionResult Get(int id) =&gt; Ok(...);
+
+[HttpPut("{id}")]
+public IActionResult Update(int id, User user) =&gt; NoContent();
+
+[HttpDelete("{id}")]
+public IActionResult Delete(int id) =&gt; NoContent();</code></pre>
+
+      <div class="note note--info">
+        <div class="note__title">Замечание</div>
+        <p>CRUD-операции — основа любого Web API и типовой учебный пример.</p>
+      </div>
+    </section>
+
+    <hr />
+
+    <section id="1-2-4">
+      <h2>1.2.4. Форматы обмена данными: JSON и сериализация</h2>
+
+      <h3>JSON (JavaScript Object Notation)</h3>
+      <p>
+        Основной формат для обмена данными между клиентом и сервером:
+      </p>
+
+      <pre><code class="language-json">{
+  "id": 1,
+  "email": "test@mail.com"
+}</code></pre>
+
+      <p>
+        ASP.NET Core автоматически конвертирует JSON → объект C# и обратно.
+      </p>
+
+      <h3>Сериализация / десериализация</h3>
+
+      <p>Используется библиотека <code>System.Text.Json</code>.</p>
+
+      <pre><code class="language-csharp">var json = JsonSerializer.Serialize(user);          // сериализация
+var user = JsonSerializer.Deserialize&lt;User&gt;(json);  // десериализация</code></pre>
+
+      <p>
+        JSON удобен, легко читаем, кроссплатформенный и поддерживается всеми
+        современными фреймворками.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
