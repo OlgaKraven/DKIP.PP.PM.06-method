@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — 2.5. Подключение PostgreSQL через docker-compose</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.html">1.1. Информационные системы</a>
+      <a href="csharp-aspnet.html">1.2. C# и ASP.NET Core</a>
+      <a href="db-efcore.html">1.3. Базы данных и EF Core</a>
+      <a href="rest-api.html">1.4. REST API</a>
+      <a href="docker.html">1.5. Docker</a>
+      <a href="dockerfile.html">1.6. Dockerfile</a>
+      <a href="docker-compose.html">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html">1.10. Документирование</a>
+      <a href="assignment.html">2. Выполнение задания</a>
+      <a href="task1-webapi.html">2.2. Web API (практика)</a>
+      <a href="task2-crud.html">2.3. CRUD-функционал</a>
+      <a href="task3-docker.html">2.4. Контейнеризация</a>
+      <a href="task4-postgres-compose.html" aria-current="page">2.5. PostgreSQL и docker-compose</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>2.5. Подключение PostgreSQL через docker-compose</h1>
+
+    <!-- Оглавление -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 2.5</div>
+      <ul>
+        <li><a href="#2-5-1">2.5.1. Цель блока</a></li>
+        <li><a href="#2-5-2">2.5.2. Добавляем провайдер PostgreSQL в проект</a></li>
+        <li><a href="#2-5-3">2.5.3. Настраиваем строку подключения</a></li>
+        <li><a href="#2-5-4">2.5.4. Обновляем Program.cs под PostgreSQL</a></li>
+        <li><a href="#2-5-5">2.5.5. Dockerfile (сверка)</a></li>
+        <li><a href="#2-5-6">2.5.6. Создаём docker-compose.yml с API и PostgreSQL</a></li>
+        <li><a href="#2-5-7">2.5.7. Запуск всего проекта через docker-compose</a></li>
+        <li><a href="#2-5-8">2.5.8. Полезные команды для работы</a></li>
+      </ul>
+    </nav>
+
+    <!-- 2.5.1 -->
+    <section id="2-5-1">
+      <h2>2.5.1. Цель блока</h2>
+
+      <p>В этом блоке студент должен:</p>
+      <ul>
+        <li>заменить InMemory-БД на PostgreSQL;</li>
+        <li>настроить подключение через EF Core + Npgsql;</li>
+        <li>настроить <code>docker-compose</code>, чтобы поднимать:
+          <ul>
+            <li>контейнер с API;</li>
+            <li>контейнер с PostgreSQL;</li>
+            <li>общий volume для данных.</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.2 -->
+    <section id="2-5-2">
+      <h2>2.5.2. Добавляем провайдер PostgreSQL в проект</h2>
+
+      <p>Файл <code>ServiceDesk.Api.csproj</code> сейчас может выглядеть так:</p>
+
+<pre><code class="language-xml">&lt;Project Sdk="Microsoft.NET.Sdk.Web"&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net9.0&lt;/TargetFramework&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" /&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" /&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+
+      <p>Добавим провайдер для PostgreSQL <code>Npgsql.EntityFrameworkCore.PostgreSQL</code>:</p>
+
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" /&gt;
+  &lt;PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" /&gt;
+  &lt;PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" /&gt;
+  &lt;PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+
+      <p>Либо установить пакет через команду:</p>
+
+      <div class="script-block">
+dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 8.0.0
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.3 -->
+    <section id="2-5-3">
+      <h2>2.5.3. Настраиваем строку подключения</h2>
+
+      <p>Сделаем так, чтобы в Docker строка подключения передавалась через переменную окружения, а в коде мы просто брали <code>DefaultConnection</code>.</p>
+
+      <p>В <code>Program.cs</code> мы будем вызывать:</p>
+
+      <div class="script-block">
+builder.Configuration.GetConnectionString("DefaultConnection")
+      </div>
+
+      <p>
+        ASP.NET Core умеет автоматически подтягивать это значение из переменной окружения
+        с именем:
+      </p>
+
+      <div class="script-block">
+ConnectionStrings__DefaultConnection=...
+      </div>
+
+      <p>
+        То есть в файле <code>appsettings.json</code> строку подключения можно не задавать — она будет переопределена в <code>docker-compose</code>.
+        Если хочется, можно добавить её для наглядности:
+      </p>
+
+      <h3>appsettings.json (опционально)</h3>
+
+<pre><code class="language-json">{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=servicedeskdb;Username=servicedesk;Password=servicedeskpwd"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+</code></pre>
+
+      <p>В контейнере эта строка подключения будет переписана через переменную окружения.</p>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.4 -->
+    <section id="2-5-4">
+      <h2>2.5.4. Обновляем Program.cs под PostgreSQL</h2>
+
+      <p>
+        Ранее в <code>Program.cs</code> использовалась InMemory-БД (метод
+        <code>UseInMemoryDatabase</code>). Теперь заменим её на PostgreSQL и
+        <code>UseNpgsql</code>.
+      </p>
+
+      <p>Пример полного <code>Program.cs</code> (минимальный вариант без лишнего кода):</p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ServiceDesk.Api.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Контроллеры
+builder.Services.AddControllers();
+
+// Подключение PostgreSQL через EF Core
+builder.Services.AddDbContext&lt;AppDbContext&gt;(options =&gt;
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseNpgsql(connectionString);
+});
+
+// Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+// Автоматическое создание БД (для учебного примера)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();
+    db.Database.EnsureCreated();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+
+      <p><strong>Важно:</strong></p>
+      <ul>
+        <li>вверху должны быть <code>using Microsoft.EntityFrameworkCore;</code> и <code>using ServiceDesk.Api.Data;</code>;</li>
+        <li>в <code>AppDbContext</code> изменений не требуется — он не привязан к конкретному провайдеру БД.</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.5 -->
+    <section id="2-5-5">
+      <h2>2.5.5. Dockerfile (сверка)</h2>
+
+      <p>
+        Dockerfile у тебя уже должен быть настроен. Ниже — сверка для проекта на
+        <code>net9.0</code> (ASP.NET Core 9), аналогично предыдущему блоку.
+      </p>
+
+<pre><code class="language-dockerfile"># Этап 1: базовый рантайм ASP.NET Core 9
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+# Этап 2: SDK для сборки .NET 9
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+COPY ["ServiceDesk.Api.csproj", "./"]
+RUN dotnet restore "ServiceDesk.Api.csproj"
+
+COPY . .
+RUN dotnet publish "ServiceDesk.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Этап 3: финальный образ
+FROM base AS final
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "ServiceDesk.Api.dll"]
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.6 -->
+    <section id="2-5-6">
+      <h2>2.5.6. Создаём docker-compose.yml с API и PostgreSQL</h2>
+
+      <p>
+        Файл <code>docker-compose.yml</code> можно положить рядом с Dockerfile (в
+        <code>ServiceDesk.Api</code>) или на уровень выше. Важно, чтобы <code>build: .</code>
+        указывал на папку, где лежат <code>Dockerfile</code> и <code>ServiceDesk.Api.csproj</code>.
+      </p>
+
+      <p>Пример <code>docker-compose.yml</code>:</p>
+
+<pre><code class="language-yaml">version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: servicedesk-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      # Строка подключения для EF Core:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=servicedeskdb;Username=servicedesk;Password=servicedeskpwd
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: servicedesk-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=servicedeskdb
+      - POSTGRES_USER=servicedesk
+      - POSTGRES_PASSWORD=servicedeskpwd
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+</code></pre>
+
+      <h3>Ключевые моменты</h3>
+      <ul>
+        <li>
+          Сервис <code>api</code>:
+          <ul>
+            <li><code>build: .</code> — собирает образ из Dockerfile;</li>
+            <li><code>ports: "8080:8080"</code> — публикует API наружу на порт 8080;</li>
+            <li>
+              <code>ConnectionStrings__DefaultConnection=...</code> — переменная окружения,
+              которая подхватывается в <code>builder.Configuration.GetConnectionString("DefaultConnection")</code>;
+            </li>
+            <li><code>Host=postgres</code> — имя хоста равно имени сервиса БД в <code>docker-compose</code>.</li>
+          </ul>
+        </li>
+        <li>
+          Сервис <code>postgres</code>:
+          <ul>
+            <li>образ <code>postgres:16-alpine</code>;</li>
+            <li>параметры <code>POSTGRES_DB</code>, <code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code> совпадают с строкой подключения;</li>
+            <li><code>volume db-data</code> для сохранения данных БД между перезапусками.</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.7 -->
+    <section id="2-5-7">
+      <h2>2.5.7. Запуск всего проекта через docker-compose</h2>
+
+      <p>Из папки, где лежит <code>docker-compose.yml</code>, выполните:</p>
+
+      <div class="script-block">
+docker compose up -d
+      </div>
+
+      <p>Если используется старая версия, можно:</p>
+
+      <div class="script-block">
+docker-compose up -d
+      </div>
+
+      <p>Проверка состояния сервисов:</p>
+
+      <div class="script-block">
+docker compose ps
+      </div>
+
+      <p>Должны быть два сервиса: <code>api</code> и <code>postgres</code>.</p>
+
+      <p>Откройте в браузере:</p>
+
+      <div class="script-block">
+http://localhost:8080/swagger
+      </div>
+
+      <p>Если всё настроено верно:</p>
+      <ul>
+        <li>API стартует в контейнере <code>api</code>;</li>
+        <li>EF Core создаёт схему БД в PostgreSQL (через <code>EnsureCreated()</code>);</li>
+        <li>Swagger показывает те же CRUD-эндпоинты, но данные теперь хранятся в PostgreSQL, а не в памяти.</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.5.8 -->
+    <section id="2-5-8">
+      <h2>2.5.8. Полезные команды для работы</h2>
+
+      <p>Команды для управления всей связкой API + PostgreSQL:</p>
+
+      <ul>
+        <li>
+          Остановить контейнеры (но оставить volume и данные):
+          <div class="script-block">
+docker compose down
+          </div>
+        </li>
+        <li>
+          Полностью удалить контейнеры и volume (данные БД будут удалены):
+          <div class="script-block">
+docker compose down -v
+          </div>
+        </li>
+        <li>
+          Логи API:
+          <div class="script-block">
+docker compose logs api
+          </div>
+        </li>
+        <li>
+          Логи БД:
+          <div class="script-block">
+docker compose logs postgres
+          </div>
+        </li>
+      </ul>
+    </section>
+
+  </main>
+</body>
+</html>
