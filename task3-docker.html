@@ -42,21 +42,21 @@
     <nav class="nav-topics">
       <div class="nav-topics__title">Оглавление раздела 2.4</div>
       <ul>
-        <li><a href="#3-1">2.4.1. Цель блока</a></li>
-        <li><a href="#3-2">2.4.2. Подготовка: проверка Docker</a></li>
-        <li><a href="#3-3">2.4.3. Структура проекта (важно для Dockerfile)</a></li>
-        <li><a href="#3-4">2.4.4. Создание файла .dockerignore</a></li>
-        <li><a href="#3-5">2.4.5. Multi-stage Dockerfile для .NET Web API</a></li>
-        <li><a href="#3-6">2.4.6. Сборка Docker-образа</a></li>
-        <li><a href="#3-7">2.4.7. Запуск контейнера и проверка Swagger</a></li>
-        <li><a href="#3-8">2.4.8. Базовые команды управления контейнером</a></li>
-        <li><a href="#3-9">2.4.9. Что студент должен зафиксировать по этому блоку</a></li>
+        <li><a href="#3-1">2.4.0. Цель блока</a></li>
+        <li><a href="#3-2">2.4.1. Подготовка: проверка Docker</a></li>
+        <li><a href="#3-3">2.4.2. Структура проекта (важно для Dockerfile)</a></li>
+        <li><a href="#3-4">2.4.3. Создание файла .dockerignore</a></li>
+        <li><a href="#3-5">2.4.4. Multi-stage Dockerfile для .NET Web API</a></li>
+        <li><a href="#3-6">2.4.5. Сборка Docker-образа</a></li>
+        <li><a href="#3-7">2.4.6. Запуск контейнера и проверка Swagger</a></li>
+        <li><a href="#3-8">2.4.7. Базовые команды управления контейнером</a></li>
+        <li><a href="#3-9">2.4.8. Что студент должен зафиксировать по этому блоку</a></li>
       </ul>
     </nav>
 
     <!-- 3.1 -->
     <section id="3-1">
-      <h2>2.4.1. Цель блока</h2>
+      <h2>2.4.0. Цель блока</h2>
 
       <p>Студент должен:</p>
       <ol>
@@ -70,7 +70,7 @@
 
     <!-- 3.2 -->
     <section id="3-2">
-      <h2>2.4.2. Подготовка: проверка Docker</h2>
+      <h2>2.4.1. Подготовка: проверка Docker</h2>
 
       <ol>
         <li>Установить Docker Desktop (Windows) или Docker Engine (Linux).</li>
@@ -95,7 +95,7 @@ docker --version
 
     <!-- 3.3 -->
     <section id="3-3">
-      <h2>2.4.3. Структура проекта (важно для Dockerfile)</h2>
+      <h2>2.4.2. Структура проекта (важно для Dockerfile)</h2>
 
       <p>Допустим, сейчас структура проекта выглядит так:</p>
 
@@ -116,7 +116,7 @@ docker --version
 
     <!-- 3.4 -->
     <section id="3-4">
-      <h2>2.4.4. Создание файла .dockerignore</h2>
+      <h2>2.4.3. Создание файла .dockerignore</h2>
 
       <p>В папке <code>ServiceDesk.Api</code> создайте файл <code>.dockerignore</code> со следующим содержимым:</p>
 
@@ -200,7 +200,7 @@ ENTRYPOINT ["dotnet", "ServiceDesk.Api.dll"]
 
     <!-- 3.6 -->
     <section id="3-6">
-      <h2>2.4.6. Сборка Docker-образа</h2>
+      <h2>2.4.5. Сборка Docker-образа</h2>
 
       <div class="note note--info">
         <div class="note__title">Важно</div>
@@ -319,7 +319,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
     <!-- 3.7 -->
     <section id="3-7">
-      <h2>2.4.7. Запуск контейнера и проверка Swagger</h2>
+      <h2>2.4.6. Запуск контейнера и проверка Swagger</h2>
 
       <div class="note note--info">
         <div class="note__title">Важно</div>
@@ -378,7 +378,7 @@ http://localhost:8080/swagger
 
     <!-- 3.8 -->
     <section id="3-8">
-      <h2>2.4.8. Базовые команды управления контейнером</h2>
+      <h2>2.4.7. Базовые команды управления контейнером</h2>
 
       <p>Для отчёта и практики полезно показать студентам базовые команды:</p>
 
@@ -420,7 +420,7 @@ docker rmi servicedesk-api:dev
 
     <!-- 3.9 -->
     <section id="3-9">
-      <h2>2.4.9. Что студент должен зафиксировать по этому блоку</h2>
+      <h2>2.4.8. Что студент должен зафиксировать по этому блоку</h2>
 
       <p>В отчёт или методические материалы студент фиксирует:</p>
 
@@ -460,3 +460,4 @@ docker rm servicedesk-api-container
   </main>
 </body>
 </html>
+
