@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — 2.3. Реализация базового CRUD-функционала</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.html">1.1. Информационные системы</a>
+      <a href="csharp-aspnet.html">1.2. C# и ASP.NET Core</a>
+      <a href="db-efcore.html">1.3. Базы данных и EF Core</a>
+      <a href="rest-api.html">1.4. REST API</a>
+      <a href="docker.html">1.5. Docker</a>
+      <a href="dockerfile.html">1.6. Dockerfile</a>
+      <a href="docker-compose.html">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html">1.10. Документирование</a>
+      <a href="assignment.html">2. Выполнение задания</a>
+      <a href="task1-webapi.html">2.2. Web API (практика)</a>
+      <a href="task2-crud.html" aria-current="page">2.3. CRUD-функционал</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>2.3. Блок. Реализация базового CRUD-функционала</h1>
+
+    <!-- Оглавление раздела -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 2.3</div>
+      <ul>
+        <li><a href="#2-3-1">2.3.1. Что такое CRUD в контексте Web API</a></li>
+        <li><a href="#2-3-2">2.3.2. Проверяем модели</a></li>
+        <li><a href="#2-3-3">2.3.3. Контекст данных (для CRUD через EF Core)</a></li>
+        <li><a href="#2-3-4">2.3.4. CRUD-контроллер для Equipment</a></li>
+        <li><a href="#2-3-5">2.3.5. CRUD-контроллер для ServiceRequest</a></li>
+        <li><a href="#2-3-6">2.3.6. Методика проверки CRUD через Swagger</a></li>
+        <li><a href="#2-3-7">2.3.7. Что студент должен зафиксировать в отчёте</a></li>
+      </ul>
+    </nav>
+
+    <!-- 2.3.1 -->
+    <section id="2-3-1">
+      <h2>2.3.1. Что такое CRUD в контексте Web API</h2>
+
+      <p>Для каждой сущности (например, <code>Equipment</code>):</p>
+      <ul>
+        <li>Create – создать запись → HTTP <strong>POST</strong></li>
+        <li>Read – прочитать записи → HTTP <strong>GET</strong> (список и по id)</li>
+        <li>Update – изменить запись → HTTP <strong>PUT</strong> (или <strong>PATCH</strong>)</li>
+        <li>Delete – удалить запись → HTTP <strong>DELETE</strong></li>
+      </ul>
+
+      <p>В API это обычно 4–5 эндпоинтов вида:</p>
+      <ul>
+        <li><code>GET /api/equipment</code> — получить список</li>
+        <li><code>GET /api/equipment/{id}</code> — получить по id</li>
+        <li><code>POST /api/equipment</code> — создать</li>
+        <li><code>PUT /api/equipment/{id}</code> — обновить</li>
+        <li><code>DELETE /api/equipment/{id}</code> — удалить</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.2 -->
+    <section id="2-3-2">
+      <h2>2.3.2. Проверяем модели</h2>
+
+      <p>У тебя должны быть модели (в папке <code>Models</code>):</p>
+
+      <h3>Models/Equipment.cs</h3>
+<pre><code class="language-csharp">namespace ServiceDesk.Api.Models
+{
+    public class Equipment
+    {
+        public int Id { get; set; }
+        public string InventoryNumber { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Room { get; set; } = "";
+        public string Status { get; set; } = "Работает";
+    }
+}
+</code></pre>
+
+      <h3>Models/ServiceRequest.cs</h3>
+<pre><code class="language-csharp">namespace ServiceDesk.Api.Models
+{
+    public class ServiceRequest
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Priority { get; set; } = "Средний";
+        public string Status { get; set; } = "Новая";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ClosedAt { get; set; }
+
+        public int? EquipmentId { get; set; }
+        public Equipment? Equipment { get; set; }
+    }
+}
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.3 -->
+    <section id="2-3-3">
+      <h2>2.3.3. Контекст данных (для CRUD через EF Core)</h2>
+
+      <p>Файл <code>Data/AppDbContext.cs</code>:</p>
+
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options)
+            : base(options)
+        {
+        }
+
+        public DbSet&lt;Equipment&gt; Equipment { get; set; }
+        public DbSet&lt;ServiceRequest&gt; ServiceRequests { get; set; }
+    }
+}
+</code></pre>
+
+      <p>В <code>Program.cs</code> уже должна быть регистрация (мы добавляли):</p>
+
+<pre><code class="language-csharp">builder.Services.AddDbContext&lt;AppDbContext&gt;(options =>
+    options.UseInMemoryDatabase("ServiceDeskDb"));
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.4 -->
+    <section id="2-3-4">
+      <h2>2.3.4. CRUD-контроллер для Equipment</h2>
+
+      <p>
+        Цель: показать полный CRUD на одной сущности, чтобы студент по аналогии
+        сделал вторую.
+      </p>
+
+      <p>Файл <code>Controllers/EquipmentController.cs</code>:</p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceDesk.Api.Data;
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class EquipmentController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public EquipmentController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/equipment
+        [HttpGet]
+        public async Task&lt;ActionResult&lt;IEnumerable&lt;Equipment&gt;&gt;&gt; GetAll()
+        {
+            var items = await _context.Equipment.ToListAsync();
+            return Ok(items);
+        }
+
+        // GET: api/equipment/5
+        [HttpGet("{id:int}")]
+        public async Task&lt;ActionResult&lt;Equipment&gt;&gt; GetById(int id)
+        {
+            var item = await _context.Equipment.FindAsync(id);
+            if (item == null)
+                return NotFound();
+
+            return Ok(item);
+        }
+
+        // POST: api/equipment
+        [HttpPost]
+        public async Task&lt;ActionResult&lt;Equipment&gt;&gt; Create(Equipment model)
+        {
+            _context.Equipment.Add(model);
+            await _context.SaveChangesAsync();
+
+            // Возвращаем 201 Created с Location
+            return CreatedAtAction(nameof(GetById), new { id = model.Id }, model);
+        }
+
+        // PUT: api/equipment/5
+        [HttpPut("{id:int}")]
+        public async Task&lt;IActionResult&gt; Update(int id, Equipment model)
+        {
+            if (id != model.Id)
+                return BadRequest("Id в пути и в теле запроса не совпадают.");
+
+            // Обновляем всё целиком
+            _context.Entry(model).State = EntityState.Modified;
+
+            await _context.SaveChangesAsync();
+            return NoContent(); // 204
+        }
+
+        // DELETE: api/equipment/5
+        [HttpDelete("{id:int}")]
+        public async Task&lt;IActionResult&gt; Delete(int id)
+        {
+            var item = await _context.Equipment.FindAsync(id);
+            if (item == null)
+                return NotFound();
+
+            _context.Equipment.Remove(item);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+    }
+}
+</code></pre>
+
+      <h3>Что важно методически</h3>
+      <ul>
+        <li><code>[ApiController]</code> + <code>[Route("api/[controller]")]</code> → маршрут <code>api/equipment</code></li>
+        <li>Возвращаемые коды состояния:
+          <ul>
+            <li><code>200 OK</code> — успешное чтение</li>
+            <li><code>201 Created</code> — при создании</li>
+            <li><code>204 NoContent</code> — при успешном обновлении/удалении</li>
+            <li><code>404 NotFound</code> — если сущность не найдена</li>
+            <li><code>400 BadRequest</code> — если некорректные данные (например, разные id)</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.5 -->
+    <section id="2-3-5">
+      <h2>2.3.5. CRUD-контроллер для ServiceRequest</h2>
+
+      <p>Теперь студент делает по аналогии для сущности заявок.</p>
+
+      <p>Файл <code>Controllers/ServiceRequestsController.cs</code>:</p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceDesk.Api.Data;
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ServiceRequestsController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public ServiceRequestsController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/servicerequests
+        [HttpGet]
+        public async Task&lt;ActionResult&lt;IEnumerable&lt;ServiceRequest&gt;&gt;&gt; GetAll()
+        {
+            var items = await _context.ServiceRequests
+                .Include(r =&gt; r.Equipment) // при желании подгружаем оборудование
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
+        // GET: api/servicerequests/5
+        [HttpGet("{id:int}")]
+        public async Task&lt;ActionResult&lt;ServiceRequest&gt;&gt; GetById(int id)
+        {
+            var item = await _context.ServiceRequests
+                .Include(r =&gt; r.Equipment)
+                .FirstOrDefaultAsync(r =&gt; r.Id == id);
+
+            if (item == null)
+                return NotFound();
+
+            return Ok(item);
+        }
+
+        // POST: api/servicerequests
+        [HttpPost]
+        public async Task&lt;ActionResult&lt;ServiceRequest&gt;&gt; Create(ServiceRequest model)
+        {
+            model.Id = 0;                   // на всякий случай
+            model.CreatedAt = DateTime.UtcNow;
+            if (model.Status == null || model.Status == "")
+                model.Status = "Новая";
+
+            _context.ServiceRequests.Add(model);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetById), new { id = model.Id }, model);
+        }
+
+        // PUT: api/servicerequests/5
+        [HttpPut("{id:int}")]
+        public async Task&lt;IActionResult&gt; Update(int id, ServiceRequest model)
+        {
+            if (id != model.Id)
+                return BadRequest("Id в пути и в теле запроса не совпадают.");
+
+            _context.Entry(model).State = EntityState.Modified;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // DELETE: api/servicerequests/5
+        [HttpDelete("{id:int}")]
+        public async Task&lt;IActionResult&gt; Delete(int id)
+        {
+            var item = await _context.ServiceRequests.FindAsync(id);
+            if (item == null)
+                return NotFound();
+
+            _context.ServiceRequests.Remove(item);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        // Дополнительно: получить только открытые заявки
+        // GET: api/servicerequests/open
+        [HttpGet("open")]
+        public async Task&lt;ActionResult&lt;IEnumerable&lt;ServiceRequest&gt;&gt;&gt; GetOpen()
+        {
+            var items = await _context.ServiceRequests
+                .Where(r =&gt; r.Status != "Выполнена" && r.Status != "Отменена")
+                .ToListAsync();
+
+            return Ok(items);
+        }
+    }
+}
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.6 -->
+    <section id="2-3-6">
+      <h2>2.3.6. Методика проверки CRUD через Swagger</h2>
+
+      <ol>
+        <li>Запусти приложение:
+          <div class="script-block">
+dotnet run
+          </div>
+        </li>
+        <li>Открой Swagger:
+          <div class="script-block">
+http://localhost:XXXX/swagger
+          </div>
+          <p>(порт смотри в консоли)</p>
+        </li>
+      </ol>
+
+      <h3>Последовательность проверки для Equipment</h3>
+
+<pre><code class="language-http">1. POST /api/Equipment
+
+{
+  "inventoryNumber": "PC-001",
+  "type": "ПК",
+  "room": "101",
+  "status": "Работает"
+}
+
+2. GET /api/Equipment
+→ должен вернуть массив с созданной записью
+
+3. GET /api/Equipment/1
+→ получить по id
+
+4. PUT /api/Equipment/1
+
+{
+  "id": 1,
+  "inventoryNumber": "PC-001",
+  "type": "ПК",
+  "room": "102",
+  "status": "Требует ремонта"
+}
+
+5. DELETE /api/Equipment/1
+
+6. GET /api/Equipment
+→ запись исчезла
+</code></pre>
+
+      <h3>Проверка ServiceRequests</h3>
+
+<pre><code class="language-http">1. Сначала создай ещё одно Equipment, чтобы была техника.
+
+2. POST /api/ServiceRequests
+
+{
+  "title": "Не включается компьютер",
+  "description": "ПК в кабинете 101 не включается",
+  "priority": "Высокий",
+  "status": "Новая",
+  "equipmentId": 1
+}
+
+3. GET /api/ServiceRequests
+
+4. GET /api/ServiceRequests/open
+
+5. PUT /api/ServiceRequests/1
+— сменить status на "В работе" или "Выполнена"
+
+6. DELETE /api/ServiceRequests/1
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- 2.3.7 -->
+    <section id="2-3-7">
+      <h2>2.3.7. Что студент должен зафиксировать в отчёте по этому блоку</h2>
+
+      <ol>
+        <li>
+          Кратко описать сущности и их поля.
+        </li>
+        <li>
+          Привести таблицу эндпоинтов API:
+          <table>
+            <thead>
+              <tr>
+                <th>Сущность</th>
+                <th>Метод</th>
+                <th>Маршрут</th>
+                <th>Назначение</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Equipment</td>
+                <td>GET</td>
+                <td>/api/equipment</td>
+                <td>Получить список оборудования</td>
+              </tr>
+              <tr>
+                <td>Equipment</td>
+                <td>GET</td>
+                <td>/api/equipment/{id}</td>
+                <td>Получить по id</td>
+              </tr>
+              <tr>
+                <td>Equipment</td>
+                <td>POST</td>
+                <td>/api/equipment</td>
+                <td>Создать запись</td>
+              </tr>
+              <tr>
+                <td>Equipment</td>
+                <td>PUT</td>
+                <td>/api/equipment/{id}</td>
+                <td>Обновить запись</td>
+              </tr>
+              <tr>
+                <td>Equipment</td>
+                <td>DELETE</td>
+                <td>/api/equipment/{id}</td>
+                <td>Удалить запись</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>GET</td>
+                <td>/api/servicerequests</td>
+                <td>Получить список заявок</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>GET</td>
+                <td>/api/servicerequests/{id}</td>
+                <td>Получить заявку по id</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>POST</td>
+                <td>/api/servicerequests</td>
+                <td>Создать заявку</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>PUT</td>
+                <td>/api/servicerequests/{id}</td>
+                <td>Обновить заявку</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>DELETE</td>
+                <td>/api/servicerequests/{id}</td>
+                <td>Удалить заявку</td>
+              </tr>
+              <tr>
+                <td>ServiceRequest</td>
+                <td>GET</td>
+                <td>/api/servicerequests/open</td>
+                <td>Получить только открытые заявки</td>
+              </tr>
+            </tbody>
+          </table>
+        </li>
+        <li>
+          Сделать скриншоты Swagger с:
+          <ul>
+            <li>списком эндпоинтов;</li>
+            <li>примерами запросов и ответов (<code>201</code>, <code>200</code>, <code>204</code>, <code>404</code>).</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+  </main>
+</body>
+</html>
