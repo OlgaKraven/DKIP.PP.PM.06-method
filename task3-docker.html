@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — 3. Контейнеризация ASP.NET Core Web API с помощью Docker (multi-stage)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.html">1.1. Информационные системы</a>
+      <a href="csharp-aspnet.html">1.2. C# и ASP.NET Core</a>
+      <a href="db-efcore.html">1.3. Базы данных и EF Core</a>
+      <a href="rest-api.html">1.4. REST API</a>
+      <a href="docker.html">1.5. Docker</a>
+      <a href="dockerfile.html">1.6. Dockerfile</a>
+      <a href="docker-compose.html">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html">1.10. Документирование</a>
+      <a href="assignment.html">2. Выполнение задания</a>
+      <a href="task1-webapi.html">2.2. Web API (практика)</a>
+      <a href="task2-crud.html">2.3. CRUD-функционал</a>
+      <a href="task3-docker.html" aria-current="page">2.4. Контейнеризация</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>3. Контейнеризация ASP.NET Core Web API с помощью Docker (multi-stage)</h1>
+
+    <!-- Оглавление -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 2.4</div>
+      <ul>
+        <li><a href="#3-1">2.4.1. Цель блока</a></li>
+        <li><a href="#3-2">2.4.2. Подготовка: проверка Docker</a></li>
+        <li><a href="#3-3">2.4.3. Структура проекта (важно для Dockerfile)</a></li>
+        <li><a href="#3-4">2.4.4. Создание файла .dockerignore</a></li>
+        <li><a href="#3-5">2.4.5. Multi-stage Dockerfile для .NET Web API</a></li>
+        <li><a href="#3-6">2.4.6. Сборка Docker-образа</a></li>
+        <li><a href="#3-7">2.4.7. Запуск контейнера и проверка Swagger</a></li>
+        <li><a href="#3-8">2.4.8. Базовые команды управления контейнером</a></li>
+        <li><a href="#3-9">2.4.9. Что студент должен зафиксировать по этому блоку</a></li>
+      </ul>
+    </nav>
+
+    <!-- 3.1 -->
+    <section id="3-1">
+      <h2>2.4.1. Цель блока</h2>
+
+      <p>Студент должен:</p>
+      <ol>
+        <li>Создать Dockerfile с multi-stage сборкой для проекта <code>ServiceDesk.Api</code>.</li>
+        <li>На его основе собрать Docker-образ.</li>
+        <li>Запустить контейнер и открыть Swagger из контейнера, а не из локального <code>dotnet run</code>.</li>
+      </ol>
+    </section>
+
+    <hr />
+
+    <!-- 3.2 -->
+    <section id="3-2">
+      <h2>2.4.2. Подготовка: проверка Docker</h2>
+
+      <ol>
+        <li>Установить Docker Desktop (Windows) или Docker Engine (Linux).</li>
+        <li>
+          Проверить в терминале:
+          <div class="script-block">
+docker --version
+          </div>
+          <p>Ожидаемый результат: вывод версии Docker, например <code>24.x.x</code>.</p>
+        </li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-1">
+        <img src="image/task3/1.png" alt="Пример результата проверки версии Docker" />
+        <figcaption>Рисунок 1 – Пример результата</figcaption>
+      </figure>
+
+      <p>Если команда не узнаётся — Docker не установлен или не добавлен в <code>PATH</code>.</p>
+    </section>
+
+    <hr />
+
+    <!-- 3.3 -->
+    <section id="3-3">
+      <h2>2.4.3. Структура проекта (важно для Dockerfile)</h2>
+
+      <p>Допустим, сейчас структура проекта выглядит так:</p>
+
+<pre><code class="language-plaintext">ppSIS/
+  ServiceDesk.Api/
+    ServiceDesk.Api.csproj
+    Program.cs
+    Controllers/
+    Models/
+    Data/
+    ...
+</code></pre>
+
+      <p><strong>Важно:</strong> файл <code>Dockerfile</code> размещается в папке <code>ServiceDesk.Api</code> рядом с файлом <code>.csproj</code>.</p>
+    </section>
+
+    <hr />
+
+    <!-- 3.4 -->
+    <section id="3-4">
+      <h2>2.4.4. Создание файла .dockerignore</h2>
+
+      <p>В папке <code>ServiceDesk.Api</code> создайте файл <code>.dockerignore</code> со следующим содержимым:</p>
+
+<pre><code class="language-plaintext">bin/
+obj/
+*.user
+*.swp
+*.suo
+*.csproj.user
+.vs/
+.git/
+.gitignore
+Dockerfile
+docker-compose*
+*.md
+</code></pre>
+
+      <p>Назначение: чтобы Docker не включал в контекст сборки временные файлы и служебные директории (<code>bin/</code>, <code>obj/</code>, <code>.git</code> и т.п.).</p>
+
+      <figure class="figure figure--center" id="fig-2">
+        <img src="image/task3/2.png" alt="Пример файла .dockerignore" />
+        <figcaption>Рисунок 2 – Пример файла .dockerignore</figcaption>
+      </figure>
+    </section>
+
+    <hr />
+
+    <!-- 3.5 -->
+    <section id="3-5">
+      <h2>2.4.5. Multi-stage Dockerfile для .NET Web API</h2>
+
+      <p>В папке <code>ServiceDesk.Api</code> создайте файл <code>Dockerfile</code> (без расширения) и вставьте:</p>
+
+<pre><code class="language-dockerfile"># Этап 1: базовый рантайм ASP.NET Core 9
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+
+# Приложение будет слушать на 8080 внутри контейнера
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+
+# Чтобы Swagger работал в контейнере, оставляем окружение Development
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+# Этап 2: SDK для сборки .NET 9
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Копируем только csproj
+COPY ["ServiceDesk.Api.csproj", "./"]
+
+# Восстанавливаем зависимости
+RUN dotnet restore "ServiceDesk.Api.csproj"
+
+# Копируем остальной код
+COPY . .
+
+# Публикуем (Release)
+RUN dotnet publish "ServiceDesk.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Этап 3: финальный образ (минимальный)
+FROM base AS final
+WORKDIR /app
+
+# Копируем опубликованные файлы
+COPY --from=build /app/publish .
+
+# Точка входа
+ENTRYPOINT ["dotnet", "ServiceDesk.Api.dll"]
+</code></pre>
+
+      <h3>Краткое пояснение</h3>
+      <ul>
+        <li><code>base</code> — лёгкий образ с рантаймом (для запуска приложения).</li>
+        <li><code>build</code> — образ с SDK (для сборки и публикации).</li>
+        <li><code>final</code> — финальный образ на основе <code>base</code>, в который попадают только опубликованные файлы.</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 3.6 -->
+    <section id="3-6">
+      <h2>2.4.6. Сборка Docker-образа</h2>
+
+      <div class="note note--info">
+        <div class="note__title">Важно</div>
+        <p>Перед началом работы запустите Docker Desktop. Если есть проблемы с его работой, закройте программы, которые могут конфликтовать с сетевыми портами (например, XAMPP, Discord).</p>
+      </div>
+
+      <figure class="figure figure--center" id="fig-3">
+        <img src="image/task3/3.png" alt="Запущенный Docker Desktop" />
+        <figcaption>Рисунок 3 – Запущенный Docker</figcaption>
+      </figure>
+
+      <ol>
+        <li>
+          Открыть терминал в папке проекта:
+          <div class="script-block">
+cd C:\Users\gvadoskr\Desktop\ppSIS\ServiceDesk.Api
+          </div>
+        </li>
+        <li>
+          Выполнить команду сборки образа:
+          <div class="script-block">
+docker build -t servicedesk-api:dev .
+          </div>
+          <p>Где:</p>
+          <ul>
+            <li><code>-t servicedesk-api:dev</code> — имя и тег образа (можно изменить по необходимости);</li>
+            <li><code>.</code> — контекст сборки (текущая папка с <code>Dockerfile</code>).</li>
+          </ul>
+          <p>Ожидаемый результат в конце лога:</p>
+<pre><code class="language-plaintext">Successfully built &lt;hash&gt;
+Successfully tagged servicedesk-api:dev
+</code></pre>
+        </li>
+      </ol>
+
+      <h3>Типичная ошибка при сборке</h3>
+
+      <figure class="figure figure--center" id="fig-4">
+        <img src="image/task3/4.png" alt="Пример ошибки при загрузке базового образа" />
+        <figcaption>Рисунок 4 – Пример ошибки</figcaption>
+      </figure>
+
+      <p>Сообщение вида:</p>
+
+<pre><code class="language-plaintext">failed to resolve source metadata for mcr.microsoft.com/dotnet/sdk:9.0
+net/http: TLS handshake timeout
+</code></pre>
+
+      <p>означает не проблему с Dockerfile, а:</p>
+      <ul>
+        <li>Docker не смог скачать базовый образ <code>mcr.microsoft.com/dotnet/sdk:9.0</code></li>
+        <li>причина: блокировка доступа в интернет, firewall, прокси или ошибка TLS.</li>
+      </ul>
+
+      <h3>Способы решения</h3>
+
+      <ol>
+        <li>
+          Повторить команду:
+          <div class="script-block">
+docker build -t servicedesk-api:dev .
+          </div>
+        </li>
+        <li>
+          Включить VPN на компьютере.
+          <p>Docker Desktop использует сетевой стек Windows, поэтому VPN часто решает проблему загрузки образов.</p>
+        </li>
+        <li>
+          Использовать зеркала Microsoft Container Registry (MCR Mirror). Заменить строки в <code>Dockerfile</code>:
+<pre><code class="language-dockerfile"># Было
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+
+# Стало
+FROM registry-1.docker.io/microsoft/dotnet-aspnet:9.0 AS base
+FROM registry-1.docker.io/microsoft/dotnet-sdk:9.0 AS build
+</code></pre>
+        </li>
+        <li>
+          Проверить доступность образа вручную:
+          <div class="script-block">
+docker pull mcr.microsoft.com/dotnet/sdk:9.0
+          </div>
+          <p>Если снова ошибка, проверить доступность сайта:</p>
+          <div class="script-block">
+https://mcr.microsoft.com
+          </div>
+        </li>
+        <li>
+          Проверить сетевые настройки Docker Desktop:
+          <ul>
+            <li>Settings → Resources → Network;</li>
+            <li>попробовать включить или отключить опции DNS и Proxy в зависимости от текущей конфигурации.</li>
+          </ul>
+        </li>
+        <li>
+          При необходимости перейти на стабильную версию .NET 8 LTS:
+          <ul>
+            <li>в <code>.csproj</code>: <code>&lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;</code>;</li>
+            <li>в <code>Dockerfile</code>:
+<pre><code class="language-dockerfile">FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+</code></pre>
+            </li>
+          </ul>
+        </li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-5">
+        <img src="image/task3/5.png" alt="Пример проверки работы приложения по ссылке из консоли" />
+        <figcaption>Рисунок 5 – Пример перехода по ссылке из консоли для проверки работы приложения</figcaption>
+      </figure>
+    </section>
+
+    <hr />
+
+    <!-- 3.7 -->
+    <section id="3-7">
+      <h2>2.4.7. Запуск контейнера и проверка Swagger</h2>
+
+      <div class="note note--info">
+        <div class="note__title">Важно</div>
+        <p>
+          Если у вас уже запущены другие контейнеры со старых практик, может возникнуть конфликт по портам.
+          Перед выполнением далее убедитесь, что старые контейнеры остановлены.
+        </p>
+      </div>
+
+      <figure class="figure figure--center" id="fig-6">
+        <img src="image/task3/6.png" alt="Пример окна с выключенным контейнером" />
+        <figcaption>Рисунок 6 – Выключенный контейнер</figcaption>
+      </figure>
+
+      <p>Запустите контейнер на порту 8080:</p>
+
+      <div class="script-block">
+docker run --name servicedesk-api-container -p 8080:8080 servicedesk-api:dev
+      </div>
+
+      <p>Расшифровка:</p>
+      <ul>
+        <li><code>--name servicedesk-api-container</code> — имя контейнера;</li>
+        <li><code>-p 8080:8080</code> — проброс порта хост:контейнер;</li>
+        <li><code>servicedesk-api:dev</code> — наш образ.</li>
+      </ul>
+
+      <p>Если всё в порядке, в логах будет что-то вроде:</p>
+
+<pre><code class="language-plaintext">Now listening on: http://0.0.0.0:8080
+Application started. Press Ctrl+C to shut down.
+</code></pre>
+
+      <p>Теперь можно открыть в браузере:</p>
+
+      <div class="script-block">
+http://localhost:8080/swagger
+      </div>
+
+      <p>Либо запустить контейнер через Docker Desktop, нажав кнопку запуска и перейдя по ссылке в столбце Port.</p>
+
+      <figure class="figure figure--center" id="fig-7">
+        <img src="image/task3/7.png" alt="Пример запуска контейнера из Docker Desktop" />
+        <figcaption>Рисунок 7 – Пример запуска из Docker Desktop</figcaption>
+      </figure>
+
+      <p>Swagger должен открыться уже из контейнера, а не из локального <code>dotnet run</code>.</p>
+
+      <figure class="figure figure--center" id="fig-8">
+        <img src="image/task3/8.png" alt="Пример работающего приложения внутри контейнера" />
+        <figcaption>Рисунок 8 – Пример работающего приложения</figcaption>
+      </figure>
+    </section>
+
+    <hr />
+
+    <!-- 3.8 -->
+    <section id="3-8">
+      <h2>2.4.8. Базовые команды управления контейнером</h2>
+
+      <p>Для отчёта и практики полезно показать студентам базовые команды:</p>
+
+      <ul>
+        <li>
+          Посмотреть запущенные контейнеры:
+          <div class="script-block">
+docker ps
+          </div>
+        </li>
+        <li>
+          Остановить контейнер:
+          <div class="script-block">
+docker stop servicedesk-api-container
+          </div>
+        </li>
+        <li>
+          Запустить контейнер снова:
+          <div class="script-block">
+docker start servicedesk-api-container
+          </div>
+        </li>
+        <li>
+          Удалить контейнер:
+          <div class="script-block">
+docker rm servicedesk-api-container
+          </div>
+        </li>
+        <li>
+          Удалить образ:
+          <div class="script-block">
+docker rmi servicedesk-api:dev
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <!-- 3.9 -->
+    <section id="3-9">
+      <h2>2.4.9. Что студент должен зафиксировать по этому блоку</h2>
+
+      <p>В отчёт или методические материалы студент фиксирует:</p>
+
+      <ol>
+        <li>
+          Текст <code>Dockerfile</code> с кратким пояснением:
+          <ul>
+            <li>какие этапы используются (<code>build</code>, <code>base</code>, <code>final</code>);</li>
+            <li>зачем нужен multi-stage (меньший финальный образ, разделение сборки и запуска).</li>
+          </ul>
+        </li>
+        <li>
+          Основные команды:
+          <div class="script-block">
+docker build -t servicedesk-api:dev .
+docker run -p 8080:8080 servicedesk-api:dev
+          </div>
+        </li>
+        <li>
+          Скриншот Swagger, работающего по адресу:
+          <div class="script-block">
+http://localhost:8080/swagger
+          </div>
+        </li>
+        <li>
+          Команды управления контейнером:
+          <div class="script-block">
+docker ps
+docker stop servicedesk-api-container
+docker start servicedesk-api-container
+docker rm servicedesk-api-container
+          </div>
+        </li>
+      </ol>
+    </section>
+
+  </main>
+</body>
+</html>
