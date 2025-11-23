@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Методические рекомендации — 2.2. Разработка Web API на ASP.NET Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Навигация между файлами -->
+  <nav class="nav-files">
+    <div class="nav-files__inner">
+      <a href="index.html">1.1. Информационные системы</a>
+      <a href="csharp-aspnet.html">1.2. C# и ASP.NET Core</a>
+      <a href="db-efcore.html">1.3. Базы данных и EF Core</a>
+      <a href="rest-api.html">1.4. REST API</a>
+      <a href="docker.html">1.5. Docker</a>
+      <a href="dockerfile.html">1.6. Dockerfile</a>
+      <a href="docker-compose.html">1.7. Docker Compose</a>
+      <a href="monitoring.html">1.8. Мониторинг и логи</a>
+      <a href="practices.html">1.9. Практики сопровождения</a>
+      <a href="documentation.html">1.10. Документирование</a>
+      <a href="assignment.html">2. Выполнение задания</a>
+      <a href="task1-webapi.html" aria-current="page">2.2. Web API (практика)</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>2.2. Разработать информационную систему на языке C# с использованием ASP.NET Core Web API</h1>
+
+    <!-- Навигация по темам блока 2.2 -->
+    <nav class="nav-topics">
+      <div class="nav-topics__title">Оглавление раздела 2.2</div>
+      <ul>
+        <li><a href="#2-2-0">2.2.0. Цель и результат блока</a></li>
+        <li><a href="#2-2-1">Этап 1. Подготовка окружения</a></li>
+        <li><a href="#2-2-2">Этап 2. Создание проекта Web API</a></li>
+        <li><a href="#2-2-3">Этап 3. Установка Swagger-пакета</a></li>
+        <li><a href="#2-2-4">Этап 4. Очистка и восстановление пакетов</a></li>
+        <li><a href="#2-2-5">Этап 5. Приведение Program.cs в порядок</a></li>
+        <li><a href="#2-2-6">Этап 6. Проверка запуска</a></li>
+        <li><a href="#2-2-7">Этап 7. Создание моделей предметной области</a></li>
+        <li><a href="#2-2-8">Этап 8. Настройка БД (InMemory)</a></li>
+        <li><a href="#2-2-9">Этап 9. Реализация CRUD-контроллера</a></li>
+        <li><a href="#2-2-10">Этап 10. Установка пакетов EF Core и проверка .csproj</a></li>
+        <li><a href="#2-2-11">Этап 11. Тестирование CRUD через Swagger</a></li>
+        <li><a href="#2-2-example">Пример тестового проекта</a></li>
+      </ul>
+    </nav>
+
+    <!-- 2.2.0 -->
+    <section id="2-2-0">
+      <h2>2.2.0. Цель и результат блока</h2>
+
+      <p><strong>Цель:</strong></p>
+      <p>
+        К концу блока у студента должен быть локально работающий Web API-проект на
+        ASP.NET Core, реализующий CRUD для выбранной предметной области (например:
+        «Заявки на ремонт техники в колледже»).
+      </p>
+
+      <p><strong>Результат:</strong></p>
+      <ul>
+        <li>решение .NET с проектом <code>ServiceDesk.Api</code> (название примерное);</li>
+        <li>описанные C#-модели домена (например, <code>Equipment</code>, <code>ServiceRequest</code>, <code>User</code>);</li>
+        <li>настроенный <code>DbContext</code> (на данном этапе можно использовать InMemory-БД);</li>
+        <li>контроллеры с CRUD-методами и работающий Swagger (UI для тестирования API).</li>
+      </ul>
+
+      <div class="note note--info">
+        <div class="note__title">Внимание</div>
+        <p>Вам требуется выполнять действия под свою предметную область.</p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- Этап 1 -->
+    <section id="2-2-1">
+      <h2>Этап 1. Подготовка окружения</h2>
+
+      <p><strong>Задача:</strong> убедиться, что всё нужное установлено.</p>
+
+      <ol>
+        <li>
+          Установить:
+          <ul>
+            <li>.NET SDK (например, .NET 8);</li>
+            <li>любую IDE: Visual Studio / Rider / VS Code.</li>
+          </ul>
+        </li>
+        <li>
+          Проверить версию .NET в терминале:
+          <div class="script-block">
+dotnet --version
+          </div>
+        </li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-1">
+        <img src="image/task1/1.png" alt="Пример проверки версии .NET в терминале" />
+        <figcaption>Рисунок 1 – Пример проверки в терминале</figcaption>
+      </figure>
+
+      <p>Ожидаемый результат: команда отрабатывает без ошибок и выводит номер версии.</p>
+
+      <div class="note note--info">
+        <div class="note__title">Внимание</div>
+        <p>Чтобы выйти из режима запуска сервисов в консоли, используйте сочетание клавиш <code>Ctrl + C</code>.</p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- Этап 2 -->
+    <section id="2-2-2">
+      <h2>Этап 2. Создание проекта Web API</h2>
+
+      <p><strong>Задача:</strong> создать скелет проекта ASP.NET Core Web API.</p>
+
+      <h3>2.2.2.1. Создание папки проекта</h3>
+      <ol>
+        <li>Создать папку под проект (например, <code>ppSIS</code> или любую другую).</li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-2">
+        <img src="image/task1/2.png" alt="Создание папки проекта" />
+        <figcaption>Рисунок 2 – Создание папки</figcaption>
+      </figure>
+
+      <h3>2.2.2.2. Открытие папки в терминале</h3>
+      <ol>
+        <li>Открыть созданную папку в терминале (PowerShell, CMD, встроенный терминал IDE).</li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-3">
+        <img src="image/task1/3.png" alt="Открытие терминала в папке проекта" />
+        <figcaption>Рисунок 3 – Открытие терминала в папке</figcaption>
+      </figure>
+
+      <h3>2.2.2.3. Создание проекта Web API</h3>
+      <ol>
+        <li>В папке для проектов выполнить команды:</li>
+      </ol>
+
+      <div class="script-block">
+dotnet new webapi -n ServiceDesk.Api
+cd ServiceDesk.Api
+      </div>
+
+      <figure class="figure figure--center" id="fig-4">
+        <img src="image/task1/4.png" alt="Запуск команд dotnet new и cd" />
+        <figcaption>Рисунок 4 – Запуск команд в терминале</figcaption>
+      </figure>
+
+      <h3>2.2.2.4. Открытие проекта в IDE</h3>
+      <ol>
+        <li>Открыть проект <code>ServiceDesk.Api</code> в IDE (Visual Studio, Rider или VS Code).</li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-5">
+        <img src="image/task1/5.png" alt="Открытие проекта в IDE" />
+        <figcaption>Рисунок 5 – Возможность открытия через нужную IDE</figcaption>
+      </figure>
+    </section>
+
+    <hr />
+
+    <!-- Этап 3 -->
+    <section id="2-2-3">
+      <h2>Этап 3. Установка правильного Swagger-пакета</h2>
+
+      <ol>
+        <li>
+          Выполнить команду для добавления библиотеки Swagger:
+          <div class="script-block">
+dotnet add package Swashbuckle.AspNetCore
+          </div>
+        </li>
+        <li>
+          Открыть файл <code>ServiceDesk.Api.csproj</code> и найти блок:
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="..." /&gt;
+  &lt;PackageReference Include="Microsoft.OpenApi" Version="..." /&gt;
+  &lt;PackageReference Include="Swashbuckle.AspNetCore" Version="..." /&gt;
+  ...
+&lt;/ItemGroup&gt;
+</code></pre>
+        </li>
+        <li>
+          Оставить только строку с <code>Swashbuckle.AspNetCore</code>, чтобы получилось:
+<pre><code class="language-xml">&lt;ItemGroup&gt;
+  &lt;PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" /&gt;
+&lt;/ItemGroup&gt;
+</code></pre>
+        </li>
+      </ol>
+
+      <p>
+        Если версия другая – не страшно, главное, чтобы <strong>не было</strong>
+        строк с <code>Microsoft.AspNetCore.OpenApi</code> и <code>Microsoft.OpenApi</code>.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- Этап 4 -->
+    <section id="2-2-4">
+      <h2>Этап 4. Почистить bin/obj и восстановить пакеты</h2>
+
+      <p>В терминале из папки проекта <code>ServiceDesk.Api</code> выполнить:</p>
+
+      <div class="script-block">
+dotnet clean
+dotnet restore
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- Этап 5 -->
+    <section id="2-2-5">
+      <h2>Этап 5. Приводим Program.cs в порядок</h2>
+
+      <p>
+        Файл <code>Program.cs</code> должен быть точно таким (замените содержимое полностью):
+      </p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using ServiceDesk.Api.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Регистрируем контроллеры
+builder.Services.AddControllers();
+
+// Swagger (Swashbuckle)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- Этап 6 -->
+    <section id="2-2-6">
+      <h2>Этап 6. Проверка запуска</h2>
+
+      <p>В терминале из папки проекта выполнить:</p>
+
+      <div class="script-block">
+dotnet run
+      </div>
+
+      <figure class="figure figure--center" id="fig-6">
+        <img src="image/task1/6.png" alt="Запуск приложения через dotnet run" />
+        <figcaption>Рисунок 6 – Запуск приложения</figcaption>
+      </figure>
+
+      <p>В консоли появится сообщение вида:</p>
+
+      <div class="script-block">
+Now listening on: http://localhost:5280
+      </div>
+
+      <figure class="figure figure--center" id="fig-7">
+        <img src="image/task1/7.png" alt="Сообщение о порте, на котором слушает приложение" />
+        <figcaption>Рисунок 7 – Появление ссылки в консоли</figcaption>
+      </figure>
+
+      <ol>
+        <li>Открыть в браузере адрес из консоли.</li>
+        <li>Перейти на <code>/swagger</code> (Swagger UI).</li>
+      </ol>
+
+      <p>Пример:</p>
+      <div class="script-block">
+http://localhost:5280/swagger
+      </div>
+
+      <figure class="figure figure--center" id="fig-8">
+        <img src="image/task1/8.png" alt="Запуск Swagger UI" />
+        <figcaption>Рисунок 8 – Запуск Swagger</figcaption>
+      </figure>
+
+      <p>Если открылся Swagger UI — блок успешно выполнен.</p>
+    </section>
+
+    <hr />
+
+    <!-- Этап 7 -->
+    <section id="2-2-7">
+      <h2>Этап 7. Создание моделей предметной области</h2>
+
+      <p>Создать папку <code>Models</code> и два файла:</p>
+
+      <h3>Models/Equipment.cs</h3>
+<pre><code class="language-csharp">namespace ServiceDesk.Api.Models
+{
+    public class Equipment
+    {
+        public int Id { get; set; }
+        public string InventoryNumber { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Room { get; set; } = "";
+        public string Status { get; set; } = "Работает";
+    }
+}
+</code></pre>
+
+      <h3>Models/ServiceRequest.cs</h3>
+<pre><code class="language-csharp">namespace ServiceDesk.Api.Models
+{
+    public class ServiceRequest
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Priority { get; set; } = "Средний";
+        public string Status { get; set; } = "Новая";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ClosedAt { get; set; }
+
+        public int? EquipmentId { get; set; }
+        public Equipment? Equipment { get; set; }
+    }
+}
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- Этап 8 -->
+    <section id="2-2-8">
+      <h2>Этап 8. Настройка БД (InMemory)</h2>
+
+      <ol>
+        <li>
+          Добавить пакет:
+          <div class="script-block">
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
+          </div>
+        </li>
+      </ol>
+
+      <figure class="figure figure--center" id="fig-9">
+        <img src="image/task1/9.png" alt="Добавление пакета Microsoft.EntityFrameworkCore.InMemory" />
+        <figcaption>Рисунок 9 – Добавление пакета</figcaption>
+      </figure>
+
+      <p>Создать папку <code>Data</code> и файл <code>Data/AppDbContext.cs</code>:</p>
+
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;     // ← ОБЯЗАТЕЛЬНО
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options)
+            : base(options)
+        {
+        }
+
+        public DbSet&lt;Equipment&gt; Equipment { get; set; }
+        public DbSet&lt;ServiceRequest&gt; ServiceRequests { get; set; }
+    }
+}
+</code></pre>
+
+      <p>Добавить контекст в <code>Program.cs</code>:</p>
+
+<pre><code class="language-csharp">builder.Services.AddDbContext&lt;AppDbContext&gt;(options =>
+    options.UseInMemoryDatabase("ServiceDeskDb"));
+</code></pre>
+
+      <figure class="figure figure--center" id="fig-10">
+        <img src="image/task1/10.png" alt="Пример файла с настройкой InMemory DbContext" />
+        <figcaption>Рисунок 10 – Пример файла</figcaption>
+      </figure>
+    </section>
+
+    <hr />
+
+    <!-- Этап 9 -->
+    <section id="2-2-9">
+      <h2>Этап 9. Реализация CRUD-контроллера</h2>
+
+      <p>Создать папку <code>Controllers</code> и файл <code>Controllers/EquipmentController.cs</code> (полный CRUD):</p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;     // ← ОБЯЗАТЕЛЬНО
+using ServiceDesk.Api.Data;
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class EquipmentController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public EquipmentController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task&lt;IEnumerable&lt;Equipment&gt;&gt; GetAll()
+            =&gt; await _context.Equipment.ToListAsync();
+
+
+        [HttpGet("{id:int}")]
+        public async Task&lt;ActionResult&lt;Equipment&gt;&gt; Get(int id)
+        {
+            var item = await _context.Equipment.FindAsync(id);
+            return item == null ? NotFound() : item;
+        }
+
+
+        [HttpPost]
+        public async Task&lt;ActionResult&lt;Equipment&gt;&gt; Create(Equipment model)
+        {
+            _context.Equipment.Add(model);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Get), new { id = model.Id }, model);
+        }
+
+
+        [HttpPut("{id:int}")]
+        public async Task&lt;IActionResult&gt; Update(int id, Equipment model)
+        {
+            if (id != model.Id)
+                return BadRequest();
+
+            _context.Entry(model).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+
+        [HttpDelete("{id:int}")]
+        public async Task&lt;IActionResult&gt; Delete(int id)
+        {
+            var item = await _context.Equipment.FindAsync(id);
+            if (item == null) return NotFound();
+
+            _context.Equipment.Remove(item);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+    }
+}
+</code></pre>
+    </section>
+
+    <hr />
+
+    <!-- Этап 10 -->
+    <section id="2-2-10">
+      <h2>Этап 10. Установи пакеты EF Core</h2>
+
+      <p>
+        Открыть терминал в папке проекта <code>ServiceDesk.Api</code> (там, где файл
+        <code>.csproj</code>) и выполнить:
+      </p>
+
+      <div class="script-block">
+dotnet add package Microsoft.EntityFrameworkCore
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
+      </div>
+
+      <p>После этого (не обязательно, но полезно):</p>
+
+      <div class="script-block">
+dotnet restore
+      </div>
+
+      <h3>ServiceDesk.Api.csproj к правильному виду</h3>
+
+      <p>Открыть файл, например:</p>
+      <div class="script-block">
+C:\Users\gvadoskr\Desktop\ppSIS\ServiceDesk.Api\ServiceDesk.Api.csproj
+      </div>
+
+      <p>И заменить содержимое целиком на:</p>
+
+<pre><code class="language-xml">&lt;Project Sdk="Microsoft.NET.Sdk.Web"&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;!-- Swagger --&gt;
+    &lt;PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" /&gt;
+
+    &lt;!-- EF Core --&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" /&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+
+      <h3>Очистка и восстановление зависимостей</h3>
+
+      <p>Открыть терминал в папке проекта:</p>
+
+      <div class="script-block">
+cd C:\Users\gvadoskr\Desktop\ppSIS\ServiceDesk.Api
+dotnet clean
+dotnet restore
+dotnet build
+      </div>
+
+      <p>
+        Если <code>dotnet build</code> прошёл без ошибок про EntityFrameworkCore —
+        зависимость подтянулась.
+      </p>
+
+      <p>Для контроля можно посмотреть список пакетов:</p>
+
+      <div class="script-block">
+dotnet list package
+      </div>
+
+      <p>В разделе <strong>Top-level Package</strong> должны быть, например:</p>
+      <ul>
+        <li>Microsoft.EntityFrameworkCore 0.0.0</li>
+        <li>Microsoft.EntityFrameworkCore.InMemory 0.0.0</li>
+        <li>Swashbuckle.AspNetCore 0.0.0</li>
+      </ul>
+
+      <div class="note note--info">
+        <div class="note__title">Внимание</div>
+        <p>
+          У вас будут свои варианты версий, которые нужно соотнести правильно с кодом.
+        </p>
+      </div>
+
+      <h3>Проверь using в трёх файлах</h3>
+
+      <h4>Program.cs</h4>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;      // ← ОБЯЗАТЕЛЬНО
+using ServiceDesk.Api.Data;              // ← чтобы видеть AppDbContext
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+// регистрируем DbContext с InMemory
+builder.Services.AddDbContext&lt;AppDbContext&gt;(options =>
+    options.UseInMemoryDatabase("ServiceDeskDb"));
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+</code></pre>
+
+      <h4>Data/AppDbContext.cs</h4>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;     // ← ОБЯЗАТЕЛЬНО
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options)
+            : base(options)
+        {
+        }
+
+        public DbSet&lt;Equipment&gt; Equipment { get; set; }
+        public DbSet&lt;ServiceRequest&gt; ServiceRequests { get; set; }
+    }
+}
+</code></pre>
+
+      <h4>Controllers/EquipmentController.cs</h4>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;     // ← ОБЯЗАТЕЛЬНО
+using ServiceDesk.Api.Data;
+using ServiceDesk.Api.Models;
+
+namespace ServiceDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class EquipmentController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public EquipmentController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // CRUD-методы...
+    }
+}
+</code></pre>
+
+      <h3>Ещё раз сборка и запуск</h3>
+
+      <p>Из папки проекта:</p>
+
+      <div class="script-block">
+dotnet build
+dotnet run
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- Этап 11 -->
+    <section id="2-2-11">
+      <h2>Этап 11. Тестирование CRUD через Swagger</h2>
+
+      <p>В Swagger выполнить последовательно операции с ресурсом <code>/api/equipment</code>:</p>
+
+      <h3>1. GET /api/equipment</h3>
+      <p>Получение списка оборудования.</p>
+
+      <figure class="figure figure--center" id="fig-11">
+        <img src="image/task1/11.png" alt="Пример запроса GET /api/equipment" />
+        <figcaption>Рисунок 11 – GET /api/equipment</figcaption>
+      </figure>
+
+      <h3>2. POST /api/equipment</h3>
+      <p>Создание новой записи об оборудовании.</p>
+
+      <figure class="figure figure--center" id="fig-12">
+        <img src="image/task1/12.png" alt="Пример запроса POST /api/equipment" />
+        <figcaption>Рисунок 12 – POST /api/equipment</figcaption>
+      </figure>
+
+      <h3>3. PUT /api/equipment/{id}</h3>
+      <p>Обновление существующей записи по идентификатору.</p>
+
+      <figure class="figure figure--center" id="fig-13">
+        <img src="image/task1/13.png" alt="Пример запроса PUT /api/equipment/{id}" />
+        <figcaption>Рисунок 13 – PUT /api/equipment/{id}</figcaption>
+      </figure>
+
+      <h3>4. DELETE /api/equipment/{id}</h3>
+      <p>Удаление записи по идентификатору.</p>
+
+      <figure class="figure figure--center" id="fig-14">
+        <img src="image/task1/14.png" alt="Пример запроса DELETE /api/equipment/{id}" />
+        <figcaption>Рисунок 14 – DELETE /api/equipment/{id}</figcaption>
+      </figure>
+
+      <p>Если каждое действие работает — CRUD реализован корректно.</p>
+    </section>
+
+    <hr />
+
+    <!-- Отдельная секция с примером проекта -->
+    <section id="2-2-example">
+      <h2>Пример тестового проекта</h2>
+      <p>
+        Пример тестового проекта с реализованным Web API и базовой инфраструктурой
+        доступен по ссылке:
+      </p>
+      <p>
+        <a href="https://github.com/OlgaKraven/DKIP.PP.PM.06-testProject.git"
+           target="_blank" rel="noopener noreferrer">
+          https://github.com/OlgaKraven/DKIP.PP.PM.06-testProject.git
+        </a>
+      </p>
+    </section>
+
+  </main>
+</body>
+</html>
