@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>2.8. Health-check и проверка работоспособности системы</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Навигация между файлами -->
+<nav class="nav-files">
+  <div class="nav-files__inner">
+    <a href="index.html">1. Введение</a>
+    <a href="task1-webapi.html">2.2. Web API</a>
+    <a href="task2-crud.html">2.3. CRUD</a>
+    <a href="task3-docker.html">2.4. Docker</a>
+    <a href="task5-postgres-compose.html">2.5. PostgreSQL + Compose</a>
+    <a href="task6-update-version.html">2.6. Обновление версии</a>
+    <a href="task7-logs.html">2.7. Логи контейнеров</a>
+    <a href="task8-health.html" aria-current="page">2.8. Health-check</a>
+  </div>
+</nav>
+
+<main class="page">
+
+<h1>2.8. Реализовать и проверить работоспособность системы через health-check</h1>
+
+<nav class="nav-topics">
+  <div class="nav-topics__title">Оглавление раздела 2.8</div>
+  <ul>
+    <li><a href="#2-8-0">2.8.0. Цель блока</a></li>
+    <li><a href="#2-8-1">2.8.1. Health-check в самом приложении (API)</a></li>
+    <li><a href="#2-8-2">2.8.2. Проверка health-check локально</a></li>
+    <li><a href="#2-8-3">2.8.3. HEALTHCHECK в Dockerfile</a></li>
+    <li><a href="#2-8-4">2.8.4. HEALTHCHECK в docker-compose (опционально)</a></li>
+    <li><a href="#2-8-5">2.8.5. Пересборка и запуск контейнеров</a></li>
+    <li><a href="#2-8-6">2.8.6. Проверка и демонстрация для отчёта</a></li>
+  </ul>
+</nav>
+
+<hr>
+
+<section id="2-8-0">
+  <h2>2.8.0. Цель блока</h2>
+
+  <p>В этом блоке настраивается проверка работоспособности системы через <strong>health-check</strong> так, чтобы:</p>
+
+  <ul>
+    <li>был простой endpoint в API для проверки состояния;</li>
+    <li>Docker мог использовать его как <code>HEALTHCHECK</code>;</li>
+    <li>студент мог протестировать работоспособность через браузер и Docker.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section id="2-8-1">
+  <h2>2.8.1. Health-check в самом приложении (API)</h2>
+
+  <p>Сделаем отдельный контроллер, который:</p>
+  <ul>
+    <li>проверяет возможность подключения к базе данных;</li>
+    <li>возвращает <code>200 OK</code>, если всё работает;</li>
+    <li>возвращает <code>503 Service Unavailable</code>, если БД недоступна.</li>
+  </ul>
+
+  <h3>Создание контроллера <code>HealthController</code></h3>
+
+  <p>Файл: <code>Controllers/HealthController.cs</code></p>
+
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceDesk.Api.Data;
+
+namespace ServiceDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class HealthController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public HealthController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task&lt;IActionResult&gt; Get()
+        {
+            var canConnect = await _context.Database.CanConnectAsync();
+
+            if (canConnect)
+                return Ok(new { status = "Healthy", db = "Up", timestamp = DateTime.UtcNow });
+
+            return StatusCode(503, new { status = "Unhealthy", db = "Down" });
+        }
+    }
+}
+</code></pre>
+
+  <p>Дополнительных изменений в <code>Program.cs</code> не требуется: контроллер будет обнаружен автоматически.</p>
+</section>
+
+<hr>
+
+<section id="2-8-2">
+  <h2>2.8.2. Проверка health-check локально</h2>
+
+  <ol>
+    <li>Запустить API (через <code>docker compose up</code> или <code>dotnet run</code>).</li>
+    <li>Открыть в браузере:
+      <div class="script-block">http://localhost:8080/api/health</div>
+    </li>
+  </ol>
+
+  <p>Если всё работает, ожидается ответ с кодом <code>200 OK</code> и JSON:</p>
+
+<pre><code class="language-json">{
+  "status": "Healthy",
+  "db": "Up",
+  "timestamp": "2025-11-23T20:01:34.867Z"
+}
+</code></pre>
+
+  <p>Пример вывода логов при запуске через <code>docker compose up</code>:</p>
+
+<pre><code class="language-plaintext">PS C:\Users\gvadoskr\Desktop\ppSIS\ServiceDesk.Api&gt; docker compose up
+time="2025-11-23T23:01:34+03:00" level=warning msg="C:\\Users\\gvadoskr\\Desktop\\ppSIS\\ServiceDesk.Api\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+[+] Running 2/2
+ ✔ Container servicedesk-postgres  Created   0.0s
+ ✔ Container servicedeskapi-api-1  Created   0.0s
+Attaching to servicedesk-postgres, api-1
+servicedesk-postgres  |
+servicedesk-postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+servicedesk-postgres  |
+servicedesk-postgres  | 2025-11-23 20:01:34.833 UTC [1] LOG:  starting PostgreSQL 16.11 ...
+servicedesk-postgres  | 2025-11-23 20:01:34.867 UTC [1] LOG:  database system is ready to accept connections
+api-1                 | info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+api-1                 |       Executed DbCommand (20ms) [...]
+api-1                 | info: Microsoft.Hosting.Lifetime[14]
+api-1                 |       Now listening on: http://[::]:8080
+api-1                 | info: Microsoft.Hosting.Lifetime[0]
+api-1                 |       Application started. Press Ctrl+C to shut down.
+</code></pre>
+
+  <p>Если база данных недоступна, endpoint вернёт <code>503 Service Unavailable</code> и статус <code>Unhealthy</code>.</p>
+
+  <figure class="image-center">
+    <img src="image/task7/1.png" alt="Запуск health-check в браузере" />
+    <figcaption>Рисунок 1 – Пример вызова <code>/api/health</code> в браузере</figcaption>
+  </figure>
+
+</section>
+
+<hr>
+
+<section id="2-8-3">
+  <h2>2.8.3. HEALTHCHECK в Dockerfile</h2>
+
+  <p>Теперь настроим проверку состояния сервиса на уровне Docker. Для этого добавим директиву <code>HEALTHCHECK</code> в <code>Dockerfile</code>.</p>
+
+  <p>Открываем <code>Dockerfile</code> и добавляем в конец (перед <code>ENTRYPOINT</code> или сразу перед ним):</p>
+
+<pre><code class="language-dockerfile">FROM base AS final
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+# Health-check: Docker будет дергать этот URL внутри контейнера
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget -qO- http://localhost:8080/api/health || exit 1
+
+ENTRYPOINT ["dotnet", "ServiceDesk.Api.dll"]
+</code></pre>
+
+  <p>Здесь используется <code>wget</code>, который обычно доступен в базовом образе. Если в образе его нет, можно заменить на <code>curl -f</code> и при необходимости установить его в слое сборки.</p>
+
+</section>
+
+<hr>
+
+<section id="2-8-4">
+  <h2>2.8.4. HEALTHCHECK в docker-compose (опционально)</h2>
+
+  <p>Дополнительно можно описать <code>healthcheck</code> в файле <code>docker-compose.yml</code> для сервиса API.</p>
+
+<pre><code class="language-yaml">services:
+  api:
+    build: .
+    image: servicedesk-api:2.0
+    container_name: servicedesk-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=servicedeskdb;Username=servicedesk;Password=servicedeskpwd
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+</code></pre>
+
+  <p>В этом случае Docker Compose будет учитывать состояние здоровья сервиса API при управлении контейнерами.</p>
+</section>
+
+<hr>
+
+<section id="2-8-5">
+  <h2>2.8.5. Пересборка и запуск контейнеров</h2>
+
+  <p>После внесения изменений в <code>Dockerfile</code> и <code>docker-compose.yml</code> необходимо пересобрать и перезапустить проект:</p>
+
+  <div class="script-block">
+docker compose down
+  </div>
+
+  <div class="script-block">
+docker compose up -d --build
+  </div>
+
+  <p>Проверка статуса контейнера:</p>
+
+  <div class="script-block">
+docker ps
+  </div>
+
+  <p>Через несколько секунд в колонке <strong>STATUS</strong> для контейнера API должно появиться что-то вроде:</p>
+
+<pre><code class="language-plaintext">Up 20 seconds (healthy)
+</code></pre>
+
+  <figure class="image-center">
+    <img src="image/task7/2.png" alt="Docker ps с пометкой healthy" />
+    <figcaption>Рисунок 2 – Пример вывода <code>docker ps</code> с пометкой <code>(healthy)</code></figcaption>
+  </figure>
+
+</section>
+
+<hr>
+
+<section id="2-8-6">
+  <h2>2.8.6. Проверка и демонстрация для отчёта</h2>
+
+  <p>В отчёте студент должен продемонстрировать работу health-check:</p>
+
+  <ol>
+    <li>
+      Скриншот или пример вызова:
+      <ul>
+        <li><code>GET http://localhost:8080/api/health</code> с кодом ответа <code>200 OK</code> и JSON-статусом.</li>
+      </ul>
+    </li>
+    <li>
+      Скриншот вывода <code>docker ps</code> с пометкой <code>(healthy)</code> у контейнера API.
+    </li>
+    <li>
+      Пример команды для детального просмотра состояния health-check:
+      <div class="script-block">
+docker inspect servicedesk-api --format='{{json .State.Health}}'
+      </div>
+
+      <p>или (в PowerShell):</p>
+
+      <div class="script-block">
+docker inspect servicedesk-api | Select-String "Health"
+      </div>
+    </li>
+    <li>
+      Краткое объяснение:
+      <ul>
+        <li>что такое health-check;</li>
+        <li>какую проверку выполняет <code>/api/health</code> (подключение к PostgreSQL);</li>
+        <li>как Docker использует <code>HEALTHCHECK</code> для мониторинга контейнера.</li>
+      </ul>
+    </li>
+  </ol>
+
+</section>
+
+</main>
+
+</body>
+</html>
